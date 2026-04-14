@@ -1,0 +1,1 @@
+export {mockQuestions, mockPlayers, mockTopAnswers} from './lib/mockData'
