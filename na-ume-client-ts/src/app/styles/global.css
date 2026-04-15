@@ -7,12 +7,17 @@ html, body, #root {
 }
 
 body {
-  background: linear-gradient(
+  /* background: linear-gradient(
     180deg,
     #0B0A4C 0%,
     #2A0F6E 50%,
     #4B169D 100%
-  );
+  ); */
+
+  background-image: url('/Background.png');
+  background-size: 100% auto;
+  background-repeat: no-repeat;   /* чтобы не повторялась */
+  background-position: center;  
 
   font-family: Inter, system-ui, sans-serif;
   overflow: hidden;
@@ -46,4 +51,10 @@ body::before {
   border-radius: 8px;
   border: none;
   cursor: pointer;
+}
+
+@media (max-width: 1920px) {
+  body {
+    background-image: url(/Background-decstop.png);
+  }
 }
