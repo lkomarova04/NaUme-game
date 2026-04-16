@@ -22,16 +22,16 @@ export const mockQuestions: Question[] = [
 
 
 export const mockPlayers: Player[] = [
-  { id: 'p1', name: 'Алиса', score: 1200, hasAnswered: true, hasGuessed: false },
+  { id: 'p1', name: 'Алиса', score: 100, hasAnswered: true, hasGuessed: false },
   { id: 'p2', name: 'Борис', score: 950, hasAnswered: true, hasGuessed: false },
-  { id: 'p3', name: 'Виктор', score: 2100, hasAnswered: false, hasGuessed: false },
+  { id: 'p3', name: 'Виктор', score: 100, hasAnswered: false, hasGuessed: false },
   { id: 'p4', name: 'Галина', score: 800, hasAnswered: true, hasGuessed: false },
 ];
 
 export const mockTopAnswers: TopAnswer[] = [
-  { text: 'Нож', count: 45, percentage: 45, revealed: false },
-  { text: 'Спички', count: 30, percentage: 30, revealed: false },
-  { text: 'Вода', count: 15, percentage: 15, revealed: false },
-  { text: 'Верёвка', count: 7, percentage: 7, revealed: false },
-  { text: 'Аптечка', count: 3, percentage: 3, revealed: false },
+  {id: "1", text: 'Нож', count: 45, percentage: 45, revealed: false },
+  {id: "2", text: 'Спички', count: 30, percentage: 30, revealed: false },
+  {id: "3", text: 'Вода', count: 15, percentage: 15, revealed: false },
+  {id: "4", text: 'Верёвка', count: 7, percentage: 7, revealed: false },
+  {id: "5", text: 'Аптечка', count: 3, percentage: 3, revealed: false },
 ];

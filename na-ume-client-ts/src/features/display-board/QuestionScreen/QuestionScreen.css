@@ -9,7 +9,7 @@
 .question-round {
   color: #b5b5b5;
   font-weight: 700;
-  text-align: left;
+  text-align: left !important;
   margin-top: 5vh;
   margin-left: 10vh;
 }

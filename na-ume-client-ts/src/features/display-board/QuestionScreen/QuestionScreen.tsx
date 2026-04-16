@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 
 import type { Question } from '@/entities/question';
 import './QuestionScreen.css';

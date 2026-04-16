@@ -1,0 +1,29 @@
+
+.leaderboard-screen {
+    padding-top:104px ;
+    font-size: 200px;
+    color: #fff;
+}
+
+.leaderboard-list {
+    display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.5vh;
+  padding: 0 25vw;
+  margin-top: 10vh;
+}
+.leaderboard-title {
+    text-align: center;
+    font-size: 200px;
+    font-weight: 700;
+}
+
+@media (max-width: 1920px) {
+    .leaderboard-screen {
+        padding-top: 32px;
+    }
+    .leaderboard-title {
+        font-size: 32px;
+    }
+}

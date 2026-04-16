@@ -19,7 +19,7 @@ body {
   background-repeat: no-repeat;   /* чтобы не повторялась */
   background-position: center;  
 
-  font-family: Inter, system-ui, sans-serif;
+ font-family: 'Poppins', sans-serif;
   overflow: hidden;
 }
 

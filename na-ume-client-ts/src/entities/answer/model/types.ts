@@ -4,6 +4,7 @@ export interface RawAnswer {
 }
 
 export interface TopAnswer {
+  id: string
   text: string;
   count: number;
   percentage: number;

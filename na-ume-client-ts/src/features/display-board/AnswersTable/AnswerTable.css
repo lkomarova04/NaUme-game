@@ -1,0 +1,66 @@
+/* .board {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  width: 100%;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 80px 1fr 120px;
+
+  height: 72px;
+  align-items: center;
+
+  padding: 0 24px;
+
+  border-radius: 14px;
+
+  background: rgba(255, 255, 255, 0.08);
+
+  color: white;
+  font-size: 28px;
+
+  transition: all 0.3s ease;
+}
+
+.index {
+  opacity: 0.6;
+  font-weight: 600;
+}
+
+.text {
+  padding-left: 10px;
+}
+
+.count {
+  text-align: right;
+  font-weight: 700;
+}
+
+.row:not(.open) {
+  opacity: 0.4;
+}
+
+.row.open {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.2),
+    rgba(255,255,255,0.05)
+  );
+
+  transform: scale(1.02);
+  animation: reveal 0.35s ease;
+}
+
+@keyframes reveal {
+  0% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+} */
