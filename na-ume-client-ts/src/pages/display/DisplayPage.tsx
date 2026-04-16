@@ -1,89 +1,114 @@
+﻿import { useMemo, useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
+
 import { QRScreen, QuestionScreen, AnswersTable } from '@/features/display-board'
-import { useState, useEffect } from 'react'
+import { LeaderBoard } from '@/features/display-board/LeaderBoard/LeaderBoard'
+import type { TopAnswer } from '@/entities/answer'
+import { useNow } from '@/shared/lib/hooks/useNow'
+import { mockPlayers, mockQuestions, mockTopAnswers } from '@/shared'
+
 import '../../app/styles/global.css'
 import '../../app/styles/reset.css'
-import {LeaderBoard} from '@/features/display-board/LeaderBoard/LeaderBoard'
-import { mockPlayers, mockTopAnswers, mockQuestions } from '@/shared'
-
 
 type Phase = 'lobby' | 'answering' | 'guessing' | 'leaderboard'
 
-type TopAnswer = {
-    id: string;
-    text: string;
-    count: number;
-    percentage: number;
-    revealed: boolean;
-};
-
-
 const DisplayPage = () => {
-    const [phase, setPhase] = useState<Phase>('lobby')
-    const [showTimer, setShowTimer] = useState(false)
-    const [question] = useState({
-    id: 'q1',
-    text: 'Что чаще всего берут на необитаемый остров?',
-  });
+  const { sessionId = 'demo-session' } = useParams()
+  const [phase, setPhase] = useState<Phase>('lobby')
+  const [phaseStartedAt, setPhaseStartedAt] = useState<number | null>(null)
+  const [phaseEndsAt, setPhaseEndsAt] = useState<number | undefined>(undefined)
+  const [isGuessingTimerVisible, setIsGuessingTimerVisible] = useState(false);
+  const now = useNow(phase === 'answering')
 
-   const [round] = useState({
+  const question = mockQuestions[0]
+  const round = {
     current: 1,
     total: 5,
-  });
+  }
 
-    const [answers] = useState<TopAnswer[]>([
-        { id: '1', text: 'Вода', count: 50, percentage: 50, revealed: false },
-        { id: '2', text: 'Нож', count: 30, percentage: 30, revealed: false },
-        { id: '3', text: 'Спички', count: 20, percentage: 20, revealed: false },
-        { id: '4', text: 'Верёвка', count: 10, percentage: 10, revealed: false },
-    ]);
+  const leaderboardPlayers = useMemo(
+    () => [...mockPlayers].sort((a, b) => b.score - a.score),
+    [],
+  )
+  const answers = useMemo<TopAnswer[]>(
+    () => mockTopAnswers.map((answer) => ({ ...answer })),
+    [],
+  )
 
-    useEffect(() => {
-        if (phase === 'answering') {
-            setShowTimer(false)
-            const timer = setTimeout(() => {
-                console.log("Запуск таймера")
-                setShowTimer(true)
-            }, 3000)
+  const isAnswerTimerVisible =
+    phase === 'answering' && phaseStartedAt !== null && now - phaseStartedAt >= 3000
 
-            return () => {
-                clearTimeout(timer)
-            }
-        }
-    }, [phase])
-    return (
-        <>
-            <div>
-                {phase === 'lobby' && <QRScreen sessionId='demo-session' />}
-                {phase === 'answering' && <QuestionScreen
-                    question={question}
-                    currentRound={round.current}
-                    totalRounds={round.total}
-                    phaseEndsAt={
-                        showTimer ? Date.now() + 40000 : undefined
-                    }
-                />}
-                {phase === 'guessing' && (
-                    <div className="guessing-layout">
-                        <div className="right">
-                            <AnswersTable answers={mockTopAnswers} question={question} currentRound={round.current}
-                                totalRounds={round.total} phaseEndsAt={Date.now() + 20000}/>
-                        </div>
+  const handlePhaseChange = (nextPhase: Phase) => {
+    const startedAt = Date.now()
 
-                    </div>
-                )}
-                {phase === 'leaderboard' && (
-                    <LeaderBoard players={mockPlayers}/>
-                )}
+    setPhase(nextPhase)
+    setPhaseStartedAt(startedAt)
+
+    if (nextPhase === 'answering') {
+      setPhaseEndsAt(startedAt + 43000)
+      return
+    }
+
+    if (nextPhase === 'guessing') {
+      setPhaseEndsAt(startedAt + 200000);
+      setIsGuessingTimerVisible(false);
+      setTimeout(() => {
+        setIsGuessingTimerVisible(true);
+      }, 3000);
+      return;
+    }
+
+    setPhaseEndsAt(undefined)
+  }
+
+  useEffect(() => {
+  if (!phaseEndsAt) return; 
+
+  if (now >= phaseEndsAt) {
+    if (phase === 'answering') {
+      handlePhaseChange('guessing');
+    } else if (phase === 'guessing') {
+      handlePhaseChange('leaderboard');
+    }
+  }
+}, [now, phaseEndsAt, phase, handlePhaseChange]);
+
+  return (
+    <>
+      <div>
+        {phase === 'lobby' && <QRScreen sessionId={sessionId} />}
+        {phase === 'answering' && (
+          <QuestionScreen
+            question={question}
+            currentRound={round.current}
+            totalRounds={round.total}
+            phaseEndsAt={isAnswerTimerVisible ? phaseEndsAt : undefined}
+          />
+        )}
+        {phase === 'guessing' && (
+          <div className="guessing-layout">
+            <div className="right">
+              <AnswersTable
+                answers={answers}
+                question={question}
+                currentRound={round.current}
+                totalRounds={round.total}
+                phaseEndsAt={isGuessingTimerVisible ? phaseEndsAt : undefined}
+              />
             </div>
+          </div>
+        )}
+        {phase === 'leaderboard' && <LeaderBoard players={leaderboardPlayers} />}
+      </div>
 
-            <div className='dev-panel'>
-                <button onClick={() => setPhase('lobby')}>QR</button>
-                <button onClick={() => setPhase('answering')}>Question</button>
-                <button onClick={() => setPhase('guessing')}>Guess</button>
-                <button onClick={() => setPhase('leaderboard')}>Leaderboard</button>
-            </div>
-        </>
-    )
+      <div className="dev-panel">
+        <button onClick={() => handlePhaseChange('lobby')}>QR</button>
+        <button onClick={() => handlePhaseChange('answering')}>Question</button>
+        <button onClick={() => handlePhaseChange('guessing')}>Guess</button>
+        <button onClick={() => handlePhaseChange('leaderboard')}>Leaderboard</button>
+      </div>
+    </>
+  )
 }
 
-export default DisplayPage;
+export default DisplayPage

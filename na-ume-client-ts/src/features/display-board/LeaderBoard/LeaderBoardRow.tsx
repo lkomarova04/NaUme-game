@@ -1,4 +1,4 @@
-import  GameRow  from '@/shared/ui/GameRow';
+﻿import GameRow from '@/shared/ui/GameRow';
 
 type Props = {
   index: number;
@@ -13,6 +13,7 @@ export const LeaderboardRow = ({ index, playerName, score }: Props) => {
       center={<p>{playerName}</p>}
       right={<p>{score}</p>}
       isRevealed={true}
+      animationDelayMs={index * 100}
     />
   );
 };

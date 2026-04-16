@@ -1,4 +1,4 @@
-import type { TopAnswer } from '@/entities/answer';
+﻿import type { TopAnswer } from '@/entities/answer';
 import './AnswerRow.css'
 import { GameRow } from '@/shared';
 
@@ -14,6 +14,7 @@ const AnswerRow = ({ index, answer }: Props) => {
       center={<p>{answer.revealed ? answer.text : '???'}</p>}
       right={<p>{answer.revealed ? answer.count : ''}</p>}
       isRevealed={answer.revealed}
+      animationDelayMs={index * 110}
     />
   );
 };

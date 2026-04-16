@@ -1,35 +1,14 @@
-import { createContext, useContext, useState, useMemo } from 'react';
-import type {ReactNode} from 'react'
-import type { SessionState, GamePhase } from '@/entities/session/model/types';
-import type { Player } from '@/entities/player/model/types';
-import type { Question } from '@/entities/question/model/types';
+﻿import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+
 import type { TopAnswer } from '@/entities/answer/model/types';
+import type { Player } from '@/entities/player/model/types';
+import type { GamePhase, SessionState } from '@/entities/session/model/types';
+import { mockPlayers, mockQuestions } from '@/shared/lib/mockData';
 
-import { mockQuestions, mockPlayers, mockTopAnswers } from '@/shared/lib/mockData';
+import { GameContext } from './game-context';
 
-
-interface GameContextValue  {
-    session: SessionState | null;
-    player: Player | null;
-    isConnected: boolean;
-
-    joinSession: (sessionId: string, playerName: string) => void;
-    submitAnswer: (answer: string) => void;
-  submitGuess: (guess: string) => void;
-
-   __setPhase: (phase: GamePhase) => void;
-  __setTopAnswers: (answers: TopAnswer[]) => void;
-}
-
-const GameContext = createContext<GameContextValue | null>(null);
-
-export const useGame = () => {
-    const ctx = useContext(GameContext);
-    if (!ctx) throw new Error('useGame must be used within GameProvider')
-    return ctx;
-}
-
-const defaultSession: SessionState = {
+const createDefaultSession = (): SessionState => ({
   sessionId: 'mock-session',
   phase: 'lobby',
   roundIndex: 0,
@@ -44,17 +23,15 @@ const defaultSession: SessionState = {
   ],
   phaseEndsAt: 0,
   isActive: true,
-};
-
+});
 
 export const MockGameProvider = ({ children }: { children: ReactNode }) => {
-  const [session, setSession] = useState<SessionState | null>(defaultSession);
+  const [session, setSession] = useState<SessionState | null>(() => createDefaultSession());
   const [playerId, setPlayerId] = useState<string | null>(null);
 
-  const isConnected = true;
   const player = useMemo(() => {
     if (!session || !playerId) return null;
-    return session.players.find((p) => p.id === playerId) ?? null;
+    return session.players.find((item) => item.id === playerId) ?? null;
   }, [session, playerId]);
 
   const joinSession = (sessionId: string, playerName: string) => {
@@ -79,7 +56,7 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
             ...prev,
             players: [...prev.players, newPlayer],
           }
-        : prev
+        : prev,
     );
 
     setPlayerId(newPlayer.id);
@@ -94,8 +71,8 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
 
       return {
         ...prev,
-        players: prev.players.map((p) =>
-          p.id === playerId ? { ...p, hasAnswered: true } : p
+        players: prev.players.map((item) =>
+          item.id === playerId ? { ...item, hasAnswered: true } : item,
         ),
       };
     });
@@ -112,8 +89,8 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
 
       return {
         ...prev,
-        players: prev.players.map((p) =>
-          p.id === playerId ? { ...p, hasGuessed: true } : p
+        players: prev.players.map((item) =>
+          item.id === playerId ? { ...item, hasGuessed: true } : item,
         ),
       };
     });
@@ -136,7 +113,7 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
       return {
         ...prev,
         phase,
-        phaseEndsAt: Date.now() + (durations[phase] || 0),
+        phaseEndsAt: Date.now() + durations[phase],
       };
     });
   };
@@ -146,10 +123,10 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
       if (!prev) return prev;
 
       const rounds = [...prev.rounds];
-      const current = rounds[prev.roundIndex];
+      const currentRound = rounds[prev.roundIndex];
 
       rounds[prev.roundIndex] = {
-        ...current,
+        ...currentRound,
         topAnswers: answers,
       };
 
@@ -160,16 +137,20 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const value: GameContextValue = {
-    session,
-    player,
-    isConnected,
-    joinSession,
-    submitAnswer,
-    submitGuess,
-    __setPhase,
-    __setTopAnswers,
-  };
-
-  return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
-}
+  return (
+    <GameContext.Provider
+      value={{
+        session,
+        player,
+        isConnected: true,
+        joinSession,
+        submitAnswer,
+        submitGuess,
+        __setPhase,
+        __setTopAnswers,
+      }}
+    >
+      {children}
+    </GameContext.Provider>
+  );
+};

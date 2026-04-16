@@ -1,6 +1,12 @@
-import { RouterProvider as ReactRouterProvider } from 'react-router-dom';
+﻿import { RouterProvider as ReactRouterProvider } from 'react-router-dom';
+
+import { MockGameProvider } from '@/app/providers/MockGameProvider';
 import { router } from '@/app/router';
 
 export const RouterProvider = () => {
-  return <ReactRouterProvider router={router} />;
+  return (
+    <MockGameProvider>
+      <ReactRouterProvider router={router} />
+    </MockGameProvider>
+  );
 };
