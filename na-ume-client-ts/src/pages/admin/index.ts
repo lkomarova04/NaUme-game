@@ -1,1 +1,1 @@
-export {default} from './PlayerPage'
+export {default} from './AdminPage'

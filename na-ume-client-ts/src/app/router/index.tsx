@@ -1,6 +1,8 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 
 import DisplayPage from "@/pages/display/DisplayPage"
+import PlayerPage from '@/pages/player';
+import AdminPage from '@/pages/admin';
 
 export const router = createBrowserRouter([
   {
@@ -11,6 +13,14 @@ export const router = createBrowserRouter([
   {
     path: '/display/:sessionId',
     element: <DisplayPage />,
+  },
+  {
+    path: '/player',
+    element: <PlayerPage />,
+  },
+  {
+    path: '/admin',
+    element: <AdminPage />,
   },
 
 ]);

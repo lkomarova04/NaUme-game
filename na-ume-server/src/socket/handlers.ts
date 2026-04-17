@@ -3,7 +3,7 @@ import { sessionManager } from '../game/SessionManager';
 
 export const registerSocketHandlers = (io: Server, socket: Socket) => {
 
-  // 👉 подключение к сессии
+
   socket.on('session:join', ({ sessionId, role }) => {
     console.log(`👤 ${role} joined ${sessionId}`);
 

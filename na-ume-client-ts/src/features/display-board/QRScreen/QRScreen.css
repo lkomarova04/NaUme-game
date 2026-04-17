@@ -44,7 +44,7 @@
 }
 
 .qr-link::before {
-  content: 'Подключение игроков';
+  content: 'Ссылка для подключения';
   color: var(--text-muted);
   font-size: 56px;
   font-weight: 600;

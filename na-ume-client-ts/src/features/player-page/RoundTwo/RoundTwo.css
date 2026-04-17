@@ -1,0 +1,30 @@
+.question-timer {
+  justify-self: end;
+  min-width: 2.8ch;
+  padding: 16px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: clamp(44px, 3vw, 96px);
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+  box-shadow: var(--shadow-soft);
+  animation: pulse 1s infinite ease-in-out;
+}
+
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.82;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
