@@ -1,4 +1,4 @@
-﻿import { useMemo, useState, useEffect } from 'react'
+﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { QRScreen, QuestionScreen, AnswersTable } from '@/features/display-board'
@@ -17,8 +17,8 @@ const DisplayPage = () => {
   const [phase, setPhase] = useState<Phase>('lobby')
   const [phaseStartedAt, setPhaseStartedAt] = useState<number | null>(null)
   const [phaseEndsAt, setPhaseEndsAt] = useState<number | undefined>(undefined)
-  const [isGuessingTimerVisible, setIsGuessingTimerVisible] = useState(false);
-  const now = useNow(phase === 'answering')
+  const [isGuessingTimerVisible, setIsGuessingTimerVisible] = useState(false)
+  const now = useNow(phase === 'answering' || phase === 'guessing')
 
   const question = mockQuestions[0]
   const round = {
@@ -38,7 +38,7 @@ const DisplayPage = () => {
   const isAnswerTimerVisible =
     phase === 'answering' && phaseStartedAt !== null && now - phaseStartedAt >= 3000
 
-  const handlePhaseChange = (nextPhase: Phase) => {
+  const handlePhaseChange = useCallback((nextPhase: Phase) => {
     const startedAt = Date.now()
 
     setPhase(nextPhase)
@@ -50,28 +50,32 @@ const DisplayPage = () => {
     }
 
     if (nextPhase === 'guessing') {
-      setPhaseEndsAt(startedAt + 200000);
-      setIsGuessingTimerVisible(false);
+      setPhaseEndsAt(startedAt + 200000)
+      setIsGuessingTimerVisible(false)
       setTimeout(() => {
-        setIsGuessingTimerVisible(true);
-      }, 3000);
-      return;
+        setIsGuessingTimerVisible(true)
+      }, 3000)
+      return
     }
 
     setPhaseEndsAt(undefined)
-  }
+  }, [])
 
   useEffect(() => {
-  if (!phaseEndsAt) return; 
-
-  if (now >= phaseEndsAt) {
-    if (phase === 'answering') {
-      handlePhaseChange('guessing');
-    } else if (phase === 'guessing') {
-      handlePhaseChange('leaderboard');
+    if (!phaseEndsAt || now < phaseEndsAt) {
+      return
     }
-  }
-}, [now, phaseEndsAt, phase, handlePhaseChange]);
+
+    const timeout = setTimeout(() => {
+      if (phase === 'answering') {
+        handlePhaseChange('guessing')
+      } else if (phase === 'guessing') {
+        handlePhaseChange('leaderboard')
+      }
+    }, 0)
+
+    return () => clearTimeout(timeout)
+  }, [now, phaseEndsAt, phase, handlePhaseChange])
 
   return (
     <>

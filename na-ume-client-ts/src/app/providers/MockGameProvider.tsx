@@ -4,12 +4,12 @@ import type { ReactNode } from 'react';
 import type { TopAnswer } from '@/entities/answer/model/types';
 import type { Player } from '@/entities/player/model/types';
 import type { GamePhase, SessionState } from '@/entities/session/model/types';
-import { mockPlayers, mockQuestions } from '@/shared/lib/mockData';
+import { mockPlayers, mockQuestions, mockTopAnswers } from '@/shared/lib/mockData';
 
 import { GameContext } from './game-context';
 
 const createDefaultSession = (): SessionState => ({
-  sessionId: 'mock-session',
+  sessionId: 'test',
   phase: 'lobby',
   roundIndex: 0,
   players: mockPlayers,
@@ -18,7 +18,7 @@ const createDefaultSession = (): SessionState => ({
       index: 0,
       question: mockQuestions[0],
       answers: [],
-      topAnswers: [],
+      topAnswers: mockTopAnswers,
     },
   ],
   phaseEndsAt: 0,
@@ -39,6 +39,12 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
 
     if (session.sessionId !== sessionId) {
       console.warn('Mock: session not found');
+      return;
+    }
+
+    const existingPlayer = session.players.find((item) => item.name === playerName.trim());
+    if (existingPlayer) {
+      setPlayerId(existingPlayer.id);
       return;
     }
 

@@ -1,30 +1,182 @@
-.question-timer {
-  justify-self: end;
+﻿.player-guessing-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 32px 20px 28px;
+  color: var(--text-main);
+}
+
+.player-guessing-header {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  text-align: center;
+}
+
+.player-question-round {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.player-question-text {
+  margin: 0;
+  font-size: clamp(28px, 7vw, 42px);
+  line-height: 1.1;
+  font-weight: 800;
+}
+
+.player-question-timer {
   min-width: 2.8ch;
-  padding: 16px 24px;
+  padding: 10px 16px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
-  font-size: clamp(44px, 3vw, 96px);
+  font-size: 28px;
   font-weight: 900;
   line-height: 1;
   text-align: center;
   box-shadow: var(--shadow-soft);
-  animation: pulse 1s infinite ease-in-out;
+}
+
+.player-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.player-slot-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  color: var(--text-main);
+  box-shadow: var(--shadow-soft);
+  cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.player-slot-card--active {
+  border-color: rgba(255, 138, 61, 0.9);
+  background: linear-gradient(135deg, rgba(255, 138, 61, 0.22), rgba(255, 82, 119, 0.2));
+  transform: translateY(-2px);
+}
+
+.player-slot-index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.player-slot-value {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.player-guess-form {
+  margin-top: 22px;
 }
 
 
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.06);
-    opacity: 0.82;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+.player-input-shell,
+.player-check-shell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  min-height: 92px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 18px;
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+}
+
+.player-input-label {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.player-guess-input {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  outline: none;
+}
+
+.player-guess-input::placeholder {
+  color: rgba(255, 255, 255, 0.46);
+  font-weight: 400;
+}
+
+.player-check-shell {
+  position: relative;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.player-check-shell input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.player-check-shell--checked {
+  border-color: rgba(255, 138, 61, 0.9);
+  background-image: linear-gradient(135deg, rgba(255, 138, 61, 0.18), rgba(255, 82, 119, 0.12));
+}
+
+.player-check-mark {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  position: relative;
+}
+
+.player-check-shell--checked .player-check-mark::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+}
+
+.player-check-text {
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.player-guess-submit {
+  margin-top: 16px;
+}
+
+.player-guess-status {
+  margin: 14px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+  text-align: center;
 }
