@@ -1,4 +1,6 @@
-﻿html, body, #root {
+html,
+body,
+#root {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -15,31 +17,33 @@
   --panel-strong: rgba(255, 255, 255, 0.14);
   --text-main: #f8ecff;
   --text-muted: rgba(248, 236, 255, 0.72);
-  --accent-start: #9C3FE4;
-  --accent-end: #C65647;
+  --accent-start: #9c3fe4;
+  --accent-end: #c65647;
   --shadow-soft: 0 20px 60px rgba(0, 0, 0, 0.32);
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: inherit;
 }
 
 body {
   background-color: var(--screen-bg);
   background-image:
-  radial-gradient(circle at top, rgba(162, 105, 247, 0.22), transparent 30%),
-  radial-gradient(circle at bottom right, rgba(59, 22, 61, 0.24), transparent 26%),
-  linear-gradient(135deg, rgba(11, 10, 76, 0.98), rgba(75, 22, 157, 0.98));
+    radial-gradient(circle at top, rgba(162, 105, 247, 0.22), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(59, 22, 61, 0.24), transparent 26%),
+    linear-gradient(135deg, rgba(11, 10, 76, 0.98), rgba(75, 22, 157, 0.98));
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
   color: var(--text-main);
   font-family: 'Poppins', sans-serif;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 body::before {
-  content: "";
+  content: '';
   position: fixed;
   inset: 0;
   background:
@@ -49,11 +53,11 @@ body::before {
 }
 
 body::after {
-  content: "";
+  content: '';
   position: fixed;
-  inset: 3vh 2vw;
+  inset: 12px;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 32px;
+  border-radius: 18px;
   pointer-events: none;
 }
 
@@ -64,11 +68,12 @@ body::after {
 
 .dev-panel {
   position: fixed;
-  right: 20px;
-  bottom: 20px;
+  right: 12px;
+  bottom: 12px;
   display: flex;
-  gap: 8px;
-  padding: 10px;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
   border: 1px solid var(--panel-border);
   border-radius: 18px;
   background: rgba(10, 10, 14, 0.7);
@@ -77,31 +82,39 @@ body::after {
 }
 
 .dev-panel button {
-  padding: 10px 14px;
+  padding: 8px 10px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
   color: #fff;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
 }
 
-@media (max-width: 1920px) {
+@media (min-width: 1600px) {
   body::after {
-    inset: 12px;
-    border-radius: 18px;
+    inset: 20px;
+    border-radius: 28px;
   }
 
   .dev-panel {
-    right: 12px;
-    bottom: 12px;
-    gap: 6px;
-    padding: 8px;
+    right: 20px;
+    bottom: 20px;
+    gap: 8px;
+    padding: 10px;
   }
 
   .dev-panel button {
-    padding: 8px 10px;
-    border-radius: 10px;
-    font-size: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 2600px) {
+  body::after {
+    inset: 3vh 2vw;
+    border-radius: 32px;
   }
 }

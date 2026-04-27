@@ -1,9 +1,14 @@
-﻿.player-guessing-screen {
-  display: flex;
-  flex-direction: column;
+.player-guessing-screen {
   min-height: 100vh;
-  padding: 32px 20px 28px;
+  padding: 24px;
   color: var(--text-main);
+}
+
+.player-guessing-shell {
+  width: min(100%, 960px);
+  margin: 0 auto;
+  display: grid;
+  gap: 20px;
 }
 
 .player-guessing-header {
@@ -23,7 +28,7 @@
 
 .player-question-text {
   margin: 0;
-  font-size: clamp(28px, 7vw, 42px);
+  font-size: clamp(28px, 5vw, 52px);
   line-height: 1.1;
   font-weight: 800;
 }
@@ -41,60 +46,49 @@
   box-shadow: var(--shadow-soft);
 }
 
-.player-slots-grid {
+.player-roundtwo-board {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  margin-top: 28px;
 }
 
-.player-slot-card {
-  display: flex;
+.player-roundtwo-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 12px;
   align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
-  color: var(--text-main);
-  box-shadow: var(--shadow-soft);
-  cursor: pointer;
-  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
 }
 
-.player-slot-card--active {
-  border-color: rgba(255, 138, 61, 0.9);
-  background: linear-gradient(135deg, rgba(255, 138, 61, 0.22), rgba(255, 82, 119, 0.2));
-  transform: translateY(-2px);
-}
-
-.player-slot-index {
+.player-roundtwo-index,
+.player-roundtwo-label {
+  min-height: 72px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
-  font-size: 20px;
-  font-weight: 800;
-  color: #fff;
-  flex-shrink: 0;
+  border-radius: 18px;
+  box-shadow: var(--shadow-soft);
 }
 
-.player-slot-value {
-  font-size: 16px;
+.player-roundtwo-index {
+  background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.player-roundtwo-label {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  padding: 0 18px;
+  justify-content: flex-start;
+  font-size: 18px;
   font-weight: 700;
 }
 
 .player-guess-form {
-  margin-top: 22px;
+  display: grid;
+  gap: 16px;
 }
 
-
-.player-input-shell,
-.player-check-shell {
+.player-input-shell {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -130,53 +124,40 @@
   font-weight: 400;
 }
 
-.player-check-shell {
-  position: relative;
-  align-items: flex-start;
-  cursor: pointer;
-}
-
-.player-check-shell input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.player-check-shell--checked {
-  border-color: rgba(255, 138, 61, 0.9);
-  background-image: linear-gradient(135deg, rgba(255, 138, 61, 0.18), rgba(255, 82, 119, 0.12));
-}
-
-.player-check-mark {
-  width: 24px;
-  height: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  position: relative;
-}
-
-.player-check-shell--checked .player-check-mark::after {
-  content: '';
-  position: absolute;
-  inset: 5px;
-  border-radius: 4px;
-  background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
-}
-
-.player-check-text {
-  font-size: 13px;
-  line-height: 1.2;
-  font-weight: 700;
-}
-
 .player-guess-submit {
-  margin-top: 16px;
+  margin-top: 0;
 }
 
 .player-guess-status {
-  margin: 14px 0 0;
+  margin: 0;
   color: rgba(255, 255, 255, 0.82);
   font-size: 14px;
   text-align: center;
+}
+
+@media (min-width: 1600px) {
+  .player-guessing-screen {
+    padding: 36px;
+  }
+
+  .player-guessing-shell {
+    width: min(100%, 1200px);
+    gap: 28px;
+  }
+
+  .player-roundtwo-label {
+    min-height: 84px;
+    font-size: 22px;
+  }
+}
+
+@media (min-width: 2600px) {
+  .player-guessing-shell {
+    width: min(100%, 1480px);
+  }
+
+  .player-roundtwo-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 22px;
+  }
 }

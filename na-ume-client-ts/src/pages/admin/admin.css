@@ -1,0 +1,112 @@
+.admin-page {
+  min-height: 100vh;
+  padding: 24px;
+  display: grid;
+  gap: 20px;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.admin-card {
+  padding: 24px;
+  border: 1px solid var(--panel-border);
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  box-shadow: var(--shadow-soft);
+}
+
+.admin-card h1,
+.admin-card h2,
+.admin-card p {
+  margin-top: 0;
+}
+
+.admin-field {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.admin-round-settings {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-round-field {
+  margin-top: 0;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-field span {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.admin-field select,
+.admin-actions button,
+.admin-list-row button {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  font: inherit;
+}
+
+.admin-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.admin-status {
+  margin-top: 16px;
+  color: var(--text-muted);
+}
+
+.admin-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.admin-list-row p {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+}
+
+.admin-list-row button {
+  max-width: 132px;
+  cursor: pointer;
+}
+
+.admin-empty {
+  color: var(--text-muted);
+}
+
+@media (min-width: 2200px) {
+  .admin-page {
+    padding: 40px 56px;
+    gap: 28px;
+  }
+
+  .admin-card {
+    padding: 32px;
+  }
+}

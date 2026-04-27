@@ -18,8 +18,22 @@ export const mockQuestions: Question[] = [
     text: 'Без какого изобретения невозможно представить современный мир?',
     category: 'Технологии',
   },
+  {
+    id: 'q4',
+    text: 'Что первым делом делают утром перед работой?',
+    category: 'Быт',
+  },
+  {
+    id: 'q5',
+    text: 'Что обычно покупают в кинотеатре?',
+    category: 'Развлечения',
+  },
+  {
+    id: 'q6',
+    text: 'Что берут с собой в поездку на море?',
+    category: 'Путешествия',
+  },
 ];
-
 
 export const mockPlayers: Player[] = [
   { id: 'p1', name: 'Алиса', score: 100, hasAnswered: true, hasGuessed: false },
@@ -29,9 +43,9 @@ export const mockPlayers: Player[] = [
 ];
 
 export const mockTopAnswers: TopAnswer[] = [
-  {id: "1", text: 'Нож', count: 45, percentage: 45, revealed: false },
-  {id: "2", text: 'Спички', count: 30, percentage: 30, revealed: false },
-  {id: "3", text: 'Вода', count: 15, percentage: 15, revealed: false },
-  {id: "4", text: 'Верёвка', count: 7, percentage: 7, revealed: false },
-  {id: "5", text: 'Аптечка', count: 3, percentage: 3, revealed: false },
+  { id: '1', text: 'Нож', count: 45, percentage: 45, revealed: false },
+  { id: '2', text: 'Спички', count: 30, percentage: 30, revealed: false },
+  { id: '3', text: 'Вода', count: 15, percentage: 15, revealed: false },
+  { id: '4', text: 'Веревка', count: 7, percentage: 7, revealed: false },
+  { id: '5', text: 'Аптечка', count: 3, percentage: 3, revealed: false },
 ];

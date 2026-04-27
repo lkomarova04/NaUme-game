@@ -1,13 +1,13 @@
-
 import type { Question } from '@/entities/question';
-import './QuestionScreen.css';
 import { useTimer } from '@/shared/lib/hooks/useTimer';
+
+import './QuestionScreen.css';
 
 type QuestionScreenProps = {
   question: Question;
   currentRound: number;
   totalRounds: number;
-  phaseEndsAt?: number; 
+  phaseEndsAt?: number;
 };
 
 const QuestionScreen = ({
@@ -16,11 +16,10 @@ const QuestionScreen = ({
   totalRounds,
   phaseEndsAt,
 }: QuestionScreenProps) => {
-    const timeLeft = useTimer(phaseEndsAt);
+  const timeLeft = useTimer(phaseEndsAt);
 
   return (
     <div className="question-screen">
-    
       {currentRound && totalRounds && (
         <div className="question-round">
           Раунд {currentRound}/{totalRounds}
@@ -29,13 +28,8 @@ const QuestionScreen = ({
 
       <div className="question-content">
         <h1 className="question-text">{question.text}</h1>
-        {timeLeft !== null && (
-        <div className="question-timer">
-          {timeLeft}
-        </div>
-      )}
+        {timeLeft !== null && <div className="question-timer">{timeLeft}</div>}
       </div>
-
     </div>
   );
 };

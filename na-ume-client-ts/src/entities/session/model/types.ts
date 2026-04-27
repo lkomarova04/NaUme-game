@@ -1,35 +1,33 @@
+import type { RawAnswer, TopAnswer } from '@/entities/answer';
 import type { Player } from '@/entities/player';
 import type { Question } from '@/entities/question';
-import type { RawAnswer, TopAnswer } from '@/entities/answer';
 
-export type GamePhase =
-  | 'lobby'        // ожидание игроков
-  | 'answering'    // ввод ассоциаций
-  | 'guessing'     // угадывание
-  | 'reveal'       // раскрытие ответов
-  | 'leaderboard'; // таблица лидеров
+export type GamePhase = 'lobby' | 'answering' | 'guessing' | 'reveal' | 'leaderboard';
+export type CategoryMode = 'shared' | 'perRound';
 
 export interface Round {
   index: number;
   question: Question;
-
   answers: RawAnswer[];
   topAnswers: TopAnswer[];
 }
 
+export interface SessionSettings {
+  categoryMode: CategoryMode;
+  sharedCategory: string | 'all';
+  roundsCount: number;
+  roundCategories: string[];
+}
+
 export interface SessionState {
   sessionId: string;
-
   phase: GamePhase;
   roundIndex: number;
-
   players: Player[];
-
   rounds: Round[];
-
-  // таймер синхронизированный
+  settings: SessionSettings;
+  availableQuestions: Question[];
+  categories: string[];
   phaseEndsAt: number;
-
-  // статус сессии
   isActive: boolean;
 }

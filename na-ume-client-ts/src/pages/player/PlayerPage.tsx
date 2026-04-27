@@ -1,11 +1,10 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
-import type { TopAnswer } from '@/entities/answer';
-import { getCurrentQuestion, getCurrentRound, getTopAnswers, getPlayersSorted } from '@/entities/session';
+import { useGame } from '@/app/providers/game-context';
+import { getCurrentQuestion, getCurrentRound, getPlayersSorted } from '@/entities/session';
 import { LeaderBoard } from '@/features/display-board/LeaderBoard/LeaderBoard';
 import { AnswerPlayer, PlayerMainPage, RoundTwo } from '@/features/player-page';
-import { useGame } from '@/app/providers/game-context';
 
 import '../../app/styles/global.css';
 import '../../app/styles/reset.css';
@@ -15,13 +14,11 @@ const PlayerPage = () => {
   const { session, player, joinSession, submitAnswer, submitGuess, __setPhase } = useGame();
   const [playerName, setPlayerName] = useState('Игрок');
   const [answerText, setAnswerText] = useState('');
-  const [guessStatus, setGuessStatus] = useState<string>('');
+  const [guessStatus, setGuessStatus] = useState('');
 
   const currentRound = session ? getCurrentRound(session) : undefined;
   const currentQuestion = session ? getCurrentQuestion(session) : undefined;
-  const topAnswers = session ? getTopAnswers(session) : [];
   const leaderboardPlayers = session ? getPlayersSorted(session) : [];
-
   const totalRounds = useMemo(() => session?.rounds.length ?? 1, [session]);
 
   const handleJoin = () => {
@@ -34,15 +31,24 @@ const PlayerPage = () => {
     setAnswerText('');
   };
 
-  const handleGuessSubmit = (slot: TopAnswer, guess: string, exactMatch: boolean) => {
+  const handleGuessSubmit = (guess: string) => {
     const normalizedGuess = guess.trim();
 
     if (!normalizedGuess) {
       return;
     }
 
-    submitGuess(`${slot.id}:${normalizedGuess}:${exactMatch ? 'exact' : 'variant'}`);
-    setGuessStatus(`Слот ${slot.id} выбран. Ответ отправлен.`);
+    const result = submitGuess(normalizedGuess);
+
+    if (!result) {
+      return;
+    }
+
+    setGuessStatus(
+      result.matched
+        ? `Отлично: "${result.answerText}" попал в топ.`
+        : 'Пока мимо топа. Попробуйте другой вариант, если время еще есть.',
+    );
   };
 
   if (!session || !currentRound || !currentQuestion) {
@@ -74,7 +80,7 @@ const PlayerPage = () => {
           currentRound={currentRound.index + 1}
           totalRounds={totalRounds}
           phaseEndsAt={session.phaseEndsAt || undefined}
-          answers={topAnswers}
+          answers={currentRound.topAnswers}
           onSubmit={handleGuessSubmit}
           status={guessStatus}
         />

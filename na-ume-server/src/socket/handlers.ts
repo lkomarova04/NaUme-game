@@ -5,7 +5,7 @@ export const registerSocketHandlers = (io: Server, socket: Socket) => {
 
 
   socket.on('session:join', ({ sessionId, role }) => {
-    console.log(`👤 ${role} joined ${sessionId}`);
+    console.log(`${role} joined ${sessionId}`);
 
     socket.join(sessionId);
 
@@ -14,8 +14,6 @@ export const registerSocketHandlers = (io: Server, socket: Socket) => {
     if (!session) {
       session = sessionManager.create(sessionId);
     }
-
-    // отправляем состояние
     io.to(sessionId).emit('session:update', session);
   });
 

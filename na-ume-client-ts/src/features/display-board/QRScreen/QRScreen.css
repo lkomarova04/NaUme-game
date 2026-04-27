@@ -1,12 +1,12 @@
-﻿.qr {
+.qr {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4vw;
+  gap: 24px;
   width: 100%;
   min-height: 100vh;
-  padding: 7vh 6vw;
+  padding: 32px 24px;
   overflow: hidden;
 }
 
@@ -24,9 +24,9 @@
 }
 
 .qr-img {
-  width: min(34vw, 640px);
+  width: min(100%, 320px);
   aspect-ratio: 1;
-  border-radius: 42px;
+  border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: var(--shadow-soft);
   animation: qr-float 7s ease-in-out infinite;
@@ -35,10 +35,10 @@
 .qr-link {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 40px 48px;
+  gap: 16px;
+  padding: 24px;
   border: 1px solid var(--panel-border);
-  border-radius: 36px;
+  border-radius: 24px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
   box-shadow: var(--shadow-soft);
 }
@@ -46,7 +46,7 @@
 .qr-link::before {
   content: 'Ссылка для подключения';
   color: var(--text-muted);
-  font-size: 56px;
+  font-size: 18px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -54,7 +54,7 @@
 
 .qr-link h1 {
   margin: 0;
-  font-size: clamp(72px, 6vw, 140px);
+  font-size: clamp(28px, 2.6vw, 52px);
   line-height: 1.05;
   word-break: break-word;
 }
@@ -80,29 +80,48 @@
   }
 }
 
-@media (max-width: 1920px) {
+@media (min-width: 1600px) {
   .qr {
-    grid-template-columns: minmax(220px, 360px) minmax(420px, 1fr);
-    gap: 32px;
-    padding: 32px 24px;
+    gap: 4vw;
+    padding: 7vh 6vw;
   }
 
   .qr-img {
-    width: min(100%, 320px);
-    border-radius: 24px;
+    width: min(34vw, 520px);
+    border-radius: 36px;
   }
 
   .qr-link {
-    gap: 16px;
-    padding: 24px;
-    border-radius: 24px;
+    gap: 24px;
+    padding: 36px 42px;
+    border-radius: 32px;
   }
 
   .qr-link::before {
-    font-size: 18px;
+    font-size: 30px;
   }
 
   .qr-link h1 {
-    font-size: clamp(28px, 2.6vw, 52px);
+    font-size: clamp(56px, 4vw, 92px);
+  }
+}
+
+@media (min-width: 2600px) {
+  .qr-img {
+    width: min(34vw, 640px);
+    border-radius: 42px;
+  }
+
+  .qr-link {
+    padding: 40px 48px;
+    border-radius: 36px;
+  }
+
+  .qr-link::before {
+    font-size: 56px;
+  }
+
+  .qr-link h1 {
+    font-size: clamp(72px, 6vw, 140px);
   }
 }
