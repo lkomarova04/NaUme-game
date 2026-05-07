@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { useParams } from 'react-router-dom';
 
 import { useGame } from '@/app/providers/game-context';
 import { getCurrentRound } from '@/entities/session';
@@ -10,20 +11,40 @@ import './admin.css';
 const roundOptions = [3, 5, 7];
 
 const AdminPage = () => {
+  const { sessionId } = useParams();
   const {
     session,
+    createSession,
     __setPhase,
+    resetGame,
+    setTimerPaused,
     revealTopAnswer,
     deleteRawAnswer,
     updateSettings,
     goToRound,
   } = useGame();
+  const [eventName, setEventName] = useState('На уме');
 
   const currentRound = session ? getCurrentRound(session) : undefined;
 
   const playersMap = useMemo(() => {
     return new Map(session?.players.map((player) => [player.id, player.name]) ?? []);
   }, [session?.players]);
+
+  if (!sessionId && !session) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <h1>ADMIN PANEL</h1>
+          <label className="admin-field">
+            <span>Название события</span>
+            <input value={eventName} onChange={(event) => setEventName(event.target.value)} />
+          </label>
+          <button onClick={() => void createSession(eventName.trim() || 'На уме')}>Создать сессию</button>
+        </section>
+      </div>
+    );
+  }
 
   if (!session || !currentRound) {
     return null;
@@ -155,10 +176,17 @@ const AdminPage = () => {
             <button onClick={() => __setPhase('guessing')}>Раунд 2</button>
             <button onClick={() => __setPhase('reveal')}>Раскрытие</button>
             <button onClick={() => __setPhase('leaderboard')}>Лидеры</button>
+            <button onClick={() => setTimerPaused(!session.phasePaused)}>
+              {session.phasePaused ? 'Продолжить таймер' : 'Пауза таймера'}
+            </button>
+            <button onClick={() => resetGame()}>Сброс игры</button>
           </div>
 
           <div className="admin-status">
             <strong>Текущий вопрос:</strong> {currentRound.question.text}
+          </div>
+          <div className="admin-status">
+            <strong>Таймер:</strong> {session.phasePaused ? 'на паузе' : 'идет'}
           </div>
         </div>
       </section>

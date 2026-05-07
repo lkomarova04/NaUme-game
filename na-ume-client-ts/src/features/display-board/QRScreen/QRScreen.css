@@ -27,9 +27,17 @@
   width: min(100%, 320px);
   aspect-ratio: 1;
   border-radius: 24px;
+  background: #fff;
+  padding: 20px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: var(--shadow-soft);
   animation: qr-float 7s ease-in-out infinite;
+}
+
+.qr-code-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .qr-link {

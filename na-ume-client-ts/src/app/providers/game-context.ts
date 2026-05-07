@@ -8,9 +8,15 @@ export interface GameContextValue {
   session: SessionState | null;
   player: Player | null;
   isConnected: boolean;
+  connectionError: string | null;
+  createSession: (eventName: string) => Promise<string | null>;
   joinSession: (sessionId: string, playerName: string) => void;
+  startGame: () => void;
+  nextPhase: () => void;
+  resetGame: () => void;
+  setTimerPaused: (paused: boolean) => void;
   submitAnswer: (answer: string) => void;
-  submitGuess: (guess: string) => { matched: boolean; answerText?: string } | null;
+  submitGuess: (guess: string) => Promise<{ matched: boolean; answerText?: string } | null>;
   revealTopAnswer: (answerId: string) => void;
   deleteRawAnswer: (answerId: string) => void;
   updateSettings: (settings: SessionSettings) => void;

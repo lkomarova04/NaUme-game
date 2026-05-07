@@ -21,6 +21,7 @@ export interface SessionSettings {
 
 export interface SessionState {
   sessionId: string;
+  eventName: string;
   phase: GamePhase;
   roundIndex: number;
   players: Player[];
@@ -29,5 +30,6 @@ export interface SessionState {
   availableQuestions: Question[];
   categories: string[];
   phaseEndsAt: number;
+  phasePaused: boolean;
   isActive: boolean;
 }

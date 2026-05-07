@@ -12,6 +12,7 @@ type RoundTwoProps = {
   currentRound: number;
   totalRounds: number;
   phaseEndsAt?: number;
+  phasePaused?: boolean;
   answers: TopAnswer[];
   status?: string;
   onSubmit: (guess: string) => void;
@@ -22,11 +23,12 @@ const RoundTwo = ({
   currentRound,
   totalRounds,
   phaseEndsAt,
+  phasePaused = false,
   answers,
   status,
   onSubmit,
 }: RoundTwoProps) => {
-  const timeLeft = useTimer(phaseEndsAt);
+  const timeLeft = useTimer(phaseEndsAt, phasePaused);
   const [guessValue, setGuessValue] = useState('');
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {

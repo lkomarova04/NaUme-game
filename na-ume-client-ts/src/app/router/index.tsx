@@ -1,28 +1,34 @@
-﻿import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 
+import { AppLayout } from '@/app/providers/AppLayout';
+import AdminPage from '@/pages/admin';
 import DisplayPage from '@/pages/display/DisplayPage';
 import PlayerPage from '@/pages/player';
-import AdminPage from '@/pages/admin';
 
 export const router = createBrowserRouter([
   {
-    path: '/',
-    element: <Navigate to="/display/test" replace />,
-  },
-  {
-    path: '/display/:sessionId',
-    element: <DisplayPage />,
-  },
-  {
-    path: '/player',
-    element: <Navigate to="/player/test" replace />,
-  },
-  {
-    path: '/player/:sessionId',
-    element: <PlayerPage />,
-  },
-  {
-    path: '/admin',
-    element: <AdminPage />,
+    element: <AppLayout />,
+    children: [
+      {
+        path: '/',
+        element: <Navigate to="/admin" replace />,
+      },
+      {
+        path: '/display/:sessionId',
+        element: <DisplayPage />,
+      },
+      {
+        path: '/player/:sessionId',
+        element: <PlayerPage />,
+      },
+      {
+        path: '/admin',
+        element: <AdminPage />,
+      },
+      {
+        path: '/admin/:sessionId',
+        element: <AdminPage />,
+      },
+    ],
   },
 ]);

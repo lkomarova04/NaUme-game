@@ -4,9 +4,10 @@ type AnswerPlayerProps = {
   value: string;
   onChange: (value: string) => void;
   onStart: () => void;
+  disabled?: boolean;
 }
 
-const AnswerPlayer = ({ value, onChange, onStart }: AnswerPlayerProps) => {
+const AnswerPlayer = ({ value, onChange, onStart, disabled = false }: AnswerPlayerProps) => {
   return (
     <div className="main-page">
       <div className="main-page__body">
@@ -17,9 +18,14 @@ const AnswerPlayer = ({ value, onChange, onStart }: AnswerPlayerProps) => {
             placeholder="Вариант ответа"
             value={value}
             onChange={(event) => onChange(event.target.value)}
+            disabled={disabled}
           />
         </div>
-        <button className="main-page__btn" onClick={onStart}>
+        <button
+          className={`main-page__btn${disabled ? ' main-page__btn--disabled' : ''}`}
+          onClick={onStart}
+          disabled={disabled}
+        >
           Отправить
         </button>
       </div>

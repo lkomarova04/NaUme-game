@@ -10,8 +10,8 @@ import '../../app/styles/global.css';
 import '../../app/styles/reset.css';
 
 const PlayerPage = () => {
-  const { sessionId = 'test' } = useParams();
-  const { session, player, joinSession, submitAnswer, submitGuess, __setPhase } = useGame();
+  const { sessionId = '' } = useParams();
+  const { session, player, joinSession, submitAnswer, submitGuess, __setPhase, connectionError } = useGame();
   const [playerName, setPlayerName] = useState('Игрок');
   const [answerText, setAnswerText] = useState('');
   const [guessStatus, setGuessStatus] = useState('');
@@ -31,14 +31,14 @@ const PlayerPage = () => {
     setAnswerText('');
   };
 
-  const handleGuessSubmit = (guess: string) => {
+  const handleGuessSubmit = async (guess: string) => {
     const normalizedGuess = guess.trim();
 
     if (!normalizedGuess) {
       return;
     }
 
-    const result = submitGuess(normalizedGuess);
+    const result = await submitGuess(normalizedGuess);
 
     if (!result) {
       return;
@@ -52,7 +52,17 @@ const PlayerPage = () => {
   };
 
   if (!session || !currentRound || !currentQuestion) {
-    return null;
+    return (
+      <>
+        <PlayerMainPage
+          value={playerName}
+          onChange={setPlayerName}
+          onStart={handleJoin}
+          joined={Boolean(player)}
+        />
+        {connectionError && <div>{connectionError}</div>}
+      </>
+    );
   }
 
   return (
@@ -71,6 +81,7 @@ const PlayerPage = () => {
           value={answerText}
           onChange={setAnswerText}
           onStart={handleAnswerSubmit}
+          disabled={Boolean(player?.hasAnswered)}
         />
       )}
 
@@ -80,6 +91,7 @@ const PlayerPage = () => {
           currentRound={currentRound.index + 1}
           totalRounds={totalRounds}
           phaseEndsAt={session.phaseEndsAt || undefined}
+          phasePaused={session.phasePaused}
           answers={currentRound.topAnswers}
           onSubmit={handleGuessSubmit}
           status={guessStatus}
@@ -88,12 +100,14 @@ const PlayerPage = () => {
 
       {session.phase === 'leaderboard' && <LeaderBoard players={leaderboardPlayers} />}
 
-      <div className="dev-panel">
-        <button onClick={() => __setPhase('lobby')}>Lobby</button>
-        <button onClick={() => __setPhase('answering')}>Answer</button>
-        <button onClick={() => __setPhase('guessing')}>Guess</button>
-        <button onClick={() => __setPhase('leaderboard')}>Leaderboard</button>
-      </div>
+      {import.meta.env.DEV && (
+        <div className="dev-panel">
+          <button onClick={() => __setPhase('lobby')}>Lobby</button>
+          <button onClick={() => __setPhase('answering')}>Answer</button>
+          <button onClick={() => __setPhase('guessing')}>Guess</button>
+          <button onClick={() => __setPhase('leaderboard')}>Leaderboard</button>
+        </div>
+      )}
     </>
   );
 };

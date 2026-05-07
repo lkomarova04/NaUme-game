@@ -8,6 +8,7 @@ type QuestionScreenProps = {
   currentRound: number;
   totalRounds: number;
   phaseEndsAt?: number;
+  phasePaused?: boolean;
 };
 
 const QuestionScreen = ({
@@ -15,8 +16,9 @@ const QuestionScreen = ({
   currentRound,
   totalRounds,
   phaseEndsAt,
+  phasePaused = false,
 }: QuestionScreenProps) => {
-  const timeLeft = useTimer(phaseEndsAt);
+  const timeLeft = useTimer(phaseEndsAt, phasePaused);
 
   return (
     <div className="question-screen">

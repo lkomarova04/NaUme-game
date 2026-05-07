@@ -59,6 +59,22 @@
   cursor: pointer;
 }
 
+.main-page__btn:disabled,
+.main-page__btn--disabled {
+  opacity: 1;
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+  color: #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: none;
+  cursor: not-allowed;
+  filter: none;
+}
+
+.main-page__input:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 @media (min-width: 1600px) {
   .main-page__body {
     width: min(100%, 560px);

@@ -130,6 +130,7 @@ const createDefaultSession = (): SessionState => {
 
   return {
     sessionId: 'test',
+    eventName: 'На уме',
     phase: 'lobby',
     roundIndex: 0,
     players: mockPlayers,
@@ -138,6 +139,7 @@ const createDefaultSession = (): SessionState => {
     availableQuestions: mockQuestions,
     categories,
     phaseEndsAt: 0,
+    phasePaused: false,
     isActive: true,
   };
 };
@@ -227,7 +229,7 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const submitGuess = (guess: string) => {
+  const submitGuess = async (guess: string) => {
     if (!session || !playerId) return null;
     if (session.phase !== 'guessing') return null;
 
@@ -363,6 +365,7 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
         ...prev,
         phase,
         phaseEndsAt: Date.now() + PHASE_DURATIONS[phase],
+        phasePaused: false,
         players: prev.players.map((item) => ({
           ...item,
           hasAnswered: phase === 'answering' ? false : item.hasAnswered,
@@ -417,7 +420,39 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
         session,
         player,
         isConnected: true,
+        connectionError: null,
+        createSession: async () => session?.sessionId ?? null,
         joinSession,
+        startGame: () => __setPhase('answering'),
+        nextPhase: () => {
+          const order: GamePhase[] = ['lobby', 'answering', 'guessing', 'reveal', 'leaderboard'];
+          const currentIndex = session ? order.indexOf(session.phase) : 0;
+          const next = order[Math.min(currentIndex + 1, order.length - 1)];
+          __setPhase(next);
+        },
+        resetGame: () =>
+          setSession((prev) =>
+            prev
+              ? {
+                  ...createDefaultSession(),
+                  players: prev.players.map((player) => ({
+                    ...player,
+                    score: 0,
+                    hasAnswered: false,
+                    hasGuessed: false,
+                  })),
+                }
+              : prev,
+          ),
+        setTimerPaused: (paused: boolean) =>
+          setSession((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  phasePaused: paused,
+                }
+              : prev,
+          ),
         submitAnswer,
         submitGuess,
         revealTopAnswer,

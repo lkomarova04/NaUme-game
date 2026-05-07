@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: na-ume-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: na_ume
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - na_ume_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d na_ume"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build:
+      context: ./na-ume-server
+    container_name: na-ume-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 3001
+      CLIENT_ORIGIN: http://localhost
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/na_ume
+      BASE_POINTS: 100
+      MAX_PLAYERS_PER_SESSION: 100
+      ANSWERING_DURATION_MS: 30000
+      GUESSING_DURATION_MS: 200000
+    ports:
+      - "3001:3001"
+
+  client:
+    build:
+      context: ./na-ume-client-ts
+      args:
+        VITE_SERVER_URL: ""
+    container_name: na-ume-client
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_started
+    ports:
+      - "80:80"
+
+  adminer:
+    image: adminer:4
+    container_name: na-ume-adminer
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+volumes:
+  na_ume_postgres_data:
