@@ -15,8 +15,9 @@ export interface GameContextValue {
   nextPhase: () => void;
   resetGame: () => void;
   setTimerPaused: (paused: boolean) => void;
-  submitAnswer: (answer: string) => void;
-  submitGuess: (guess: string) => Promise<{ matched: boolean; answerText?: string } | null>;
+  setCurrentTimer: (durationSec: number) => void;
+  submitAnswer: (answer: string) => Promise<{ success: boolean; message?: string }>;
+  submitGuess: (guess: string) => Promise<{ matched: boolean; answerText?: string; error?: string } | null>;
   revealTopAnswer: (answerId: string) => void;
   deleteRawAnswer: (answerId: string) => void;
   updateSettings: (settings: SessionSettings) => void;

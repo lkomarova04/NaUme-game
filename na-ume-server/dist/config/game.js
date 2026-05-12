@@ -47,4 +47,7 @@ exports.DEFAULT_SETTINGS = {
     sharedCategory: 'all',
     roundsCount: 5,
     roundCategories: Array.from({ length: 5 }, () => 'all'),
+    answeringDurationSec: 30,
+    guessingDurationSec: 200,
+    startDelaySec: 0,
 };

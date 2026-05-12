@@ -10,6 +10,7 @@ import type {
   RevealAnswerPayload,
   ResetGamePayload,
   SetRoundPayload,
+  SetTimerPayload,
   SessionPhasePayload,
   SubmitAnswerPayload,
   SubmitGuessPayload,
@@ -86,6 +87,12 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
       callback({ sessionId: session.sessionId });
       socket.emit('session:update', session);
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Не удалось отправить догадку.';
+      const clientMessage =
+        error instanceof Error && error.message === 'Guess contains inappropriate language'
+          ? 'Ответ не отправлен из-за недопустимой брани.'
+          : message;
+
       emitError(socket, {
         code: 'CREATE_SESSION_FAILED',
         message: error instanceof Error ? error.message : 'Не удалось создать сессию.',
@@ -137,6 +144,18 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
       emitError(socket, {
         code: 'PAUSE_TIMER_FAILED',
         message: error instanceof Error ? error.message : 'Не удалось изменить состояние таймера.',
+      });
+    }
+  });
+
+  socket.on('organizer:set-timer', (payload: SetTimerPayload) => {
+    try {
+      requireOrganizer(socket);
+      gameService.setCurrentTimer(payload.sessionId, payload.durationSec);
+    } catch (error) {
+      emitError(socket, {
+        code: 'SET_TIMER_FAILED',
+        message: error instanceof Error ? error.message : 'Не удалось изменить таймер.',
       });
     }
   });
@@ -201,7 +220,7 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
     }
   });
 
-  socket.on('game:submit-answer', (payload: SubmitAnswerPayload) => {
+  socket.on('game:submit-answer', (payload: SubmitAnswerPayload, callback?: (result: { success: boolean; message?: string }) => void) => {
     try {
       if (!socket.data.sessionId || !socket.data.playerId) {
         throw new Error('Player is not attached to a session');
@@ -209,11 +228,19 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
 
       const result = gameService.submitAnswer(socket.data.sessionId, socket.data.playerId, payload.answer);
       socket.emit('player:update', result.player);
+      callback?.({ success: true });
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Не удалось отправить ответ.';
+      const clientMessage =
+        error instanceof Error && error.message === 'Answer contains inappropriate language'
+          ? 'Ответ не отправлен из-за недопустимой брани.'
+          : message;
+
       emitError(socket, {
         code: 'SUBMIT_ANSWER_FAILED',
-        message: error instanceof Error ? error.message : 'Не удалось отправить ответ.',
+        message: clientMessage,
       });
+      callback?.({ success: false, message: clientMessage });
     }
   });
 
@@ -227,10 +254,17 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
       socket.emit('player:update', result.player);
       callback?.(result.result);
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Не удалось отправить догадку.';
+      const clientMessage =
+        error instanceof Error && error.message === 'Guess contains inappropriate language'
+          ? 'Ответ не отправлен из-за недопустимой брани.'
+          : message;
+
       emitError(socket, {
         code: 'SUBMIT_GUESS_FAILED',
-        message: error instanceof Error ? error.message : 'Не удалось отправить догадку.',
+        message: clientMessage,
       });
+      callback?.({ matched: false, error: clientMessage });
     }
   });
 

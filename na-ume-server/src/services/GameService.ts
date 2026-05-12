@@ -95,8 +95,26 @@ export class GameService {
 
     session.isActive = true;
     session.roundIndex = Math.min(session.roundIndex, session.rounds.length - 1);
+    const startDelayMs = this.getStartDelayMs(session);
+
+    if (startDelayMs > 0) {
+      this.clearTimer(session);
+      session.phasePaused = false;
+      session.phaseEndsAt = Date.now() + startDelayMs;
+      session.timer = setTimeout(() => {
+        try {
+          this.prepareRoundPlayers(session);
+          this.setPhase(session, 'answering', this.getAnsweringDurationMs(session));
+        } catch (error) {
+          console.error('Failed to start delayed phase', error);
+        }
+      }, startDelayMs);
+      this.persistAndBroadcast(session);
+      return this.toSessionState(session);
+    }
+
     this.prepareRoundPlayers(session);
-    this.setPhase(session, 'answering', env.answeringDurationMs);
+    this.setPhase(session, 'answering', this.getAnsweringDurationMs(session));
     return this.toSessionState(session);
   }
 
@@ -114,7 +132,7 @@ export class GameService {
         this.finishGuessing(session);
         break;
       case 'reveal':
-        this.finishReveal(session);
+        this.finishGuessing(session);
         break;
       case 'leaderboard':
         this.moveAfterLeaderboard(session);
@@ -138,18 +156,19 @@ export class GameService {
       case 'answering':
         session.isActive = true;
         this.prepareRoundPlayers(session);
-        this.setPhase(session, 'answering', env.answeringDurationMs);
+        this.setPhase(session, 'answering', this.getAnsweringDurationMs(session));
         break;
       case 'guessing': {
         const round = this.getCurrentRound(session);
         round.topAnswers = this.buildTopAnswers(round.answers, round.question.id);
         this.hooks.onTopAnswers?.(session.sessionId, this.cloneTopAnswers(round.topAnswers));
         this.prepareRoundPlayers(session, { resetAnswers: false, resetGuesses: true });
-        this.setPhase(session, 'guessing', env.guessingDurationMs);
+        this.setPhase(session, 'guessing', this.getGuessingDurationMs(session));
         break;
       }
       case 'reveal':
-        this.setPhase(session, 'reveal', 0);
+        this.forcePhase(sessionId, 'guessing');
+        return this.toSessionState(session);
         break;
       case 'leaderboard':
         this.setPhase(session, 'leaderboard', 0);
@@ -192,8 +211,8 @@ export class GameService {
 
   revealAnswer(sessionId: string, answerIndex: number) {
     const session = this.requireSession(sessionId);
-    if (session.phase !== 'reveal') {
-      throw new Error('Answers can only be revealed during reveal phase');
+    if (session.phase !== 'guessing' && session.phase !== 'reveal') {
+      throw new Error('Answers can only be revealed during guessing phase');
     }
 
     const currentRound = this.getCurrentRound(session);
@@ -202,12 +221,8 @@ export class GameService {
       throw new Error('Top answer not found');
     }
 
-    targetAnswer.revealed = true;
+    targetAnswer.revealed = !targetAnswer.revealed;
     this.persistAndBroadcast(session);
-
-    if (currentRound.topAnswers.every((answer) => answer.revealed)) {
-      this.finishReveal(session);
-    }
 
     return this.toSessionState(session);
   }
@@ -365,6 +380,9 @@ export class GameService {
     session.settings = {
       ...settings,
       roundCategories: [...settings.roundCategories],
+      answeringDurationSec: this.clampTimerSeconds(settings.answeringDurationSec),
+      guessingDurationSec: this.clampTimerSeconds(settings.guessingDurationSec),
+      startDelaySec: this.clampDelaySeconds(settings.startDelaySec),
     };
     session.rounds = this.buildRoundsFromSettings(session.settings);
 
@@ -393,12 +411,25 @@ export class GameService {
     return this.toSessionState(session);
   }
 
+  setCurrentTimer(sessionId: string, durationSec: number) {
+    const session = this.requireSession(sessionId);
+
+    if (session.phase === 'lobby' || session.phasePaused) {
+      session.phaseEndsAt = Math.max(0, this.clampTimerSeconds(durationSec) * 1000);
+      this.persistAndBroadcast(session);
+      return this.toSessionState(session);
+    }
+
+    this.setPhase(session, session.phase, this.clampTimerSeconds(durationSec) * 1000);
+    return this.toSessionState(session);
+  }
+
   private finishAnswering(session: InternalSession) {
     const round = this.getCurrentRound(session);
     round.topAnswers = this.buildTopAnswers(round.answers, round.question.id);
     this.hooks.onTopAnswers?.(session.sessionId, this.cloneTopAnswers(round.topAnswers));
     this.prepareRoundPlayers(session, { resetGuesses: true });
-    this.setPhase(session, 'guessing', env.guessingDurationMs);
+    this.setPhase(session, 'guessing', this.getGuessingDurationMs(session));
   }
 
   private finishGuessing(session: InternalSession) {
@@ -407,20 +438,7 @@ export class GameService {
     if (hasNextRound) {
       session.roundIndex += 1;
       this.prepareRoundPlayers(session);
-      this.setPhase(session, 'answering', env.answeringDurationMs);
-      return;
-    }
-
-    this.setPhase(session, 'leaderboard', env.leaderboardDurationMs);
-  }
-
-  private finishReveal(session: InternalSession) {
-    const hasNextRound = session.roundIndex < session.rounds.length - 1;
-
-    if (hasNextRound) {
-      session.roundIndex += 1;
-      this.prepareRoundPlayers(session);
-      this.setPhase(session, 'answering', env.answeringDurationMs);
+      this.setPhase(session, 'answering', this.getAnsweringDurationMs(session));
       return;
     }
 
@@ -584,6 +602,26 @@ export class GameService {
 
   private buildRounds(): Round[] {
     return this.buildRoundsFromSettings(DEFAULT_SETTINGS);
+  }
+
+  private getAnsweringDurationMs(session: InternalSession) {
+    return this.clampTimerSeconds(session.settings.answeringDurationSec) * 1000 || env.answeringDurationMs;
+  }
+
+  private getGuessingDurationMs(session: InternalSession) {
+    return this.clampTimerSeconds(session.settings.guessingDurationSec) * 1000 || env.guessingDurationMs;
+  }
+
+  private getStartDelayMs(session: InternalSession) {
+    return this.clampDelaySeconds(session.settings.startDelaySec) * 1000;
+  }
+
+  private clampTimerSeconds(value: number) {
+    return Math.max(5, Math.min(3600, Number.isFinite(value) ? Math.round(value) : 30));
+  }
+
+  private clampDelaySeconds(value: number) {
+    return Math.max(0, Math.min(600, Number.isFinite(value) ? Math.round(value) : 0));
   }
 
   private buildRoundsFromSettings(settings: SessionSettings): Round[] {

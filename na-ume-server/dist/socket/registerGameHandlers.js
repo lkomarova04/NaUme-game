@@ -57,6 +57,10 @@ const registerGameHandlers = (_io, socket, gameService) => {
             socket.emit('session:update', session);
         }
         catch (error) {
+            const message = error instanceof Error ? error.message : 'Не удалось отправить догадку.';
+            const clientMessage = error instanceof Error && error.message === 'Guess contains inappropriate language'
+                ? 'Ответ не отправлен из-за недопустимой брани.'
+                : message;
             emitError(socket, {
                 code: 'CREATE_SESSION_FAILED',
                 message: error instanceof Error ? error.message : 'Не удалось создать сессию.',
@@ -108,6 +112,18 @@ const registerGameHandlers = (_io, socket, gameService) => {
             emitError(socket, {
                 code: 'PAUSE_TIMER_FAILED',
                 message: error instanceof Error ? error.message : 'Не удалось изменить состояние таймера.',
+            });
+        }
+    });
+    socket.on('organizer:set-timer', (payload) => {
+        try {
+            requireOrganizer(socket);
+            gameService.setCurrentTimer(payload.sessionId, payload.durationSec);
+        }
+        catch (error) {
+            emitError(socket, {
+                code: 'SET_TIMER_FAILED',
+                message: error instanceof Error ? error.message : 'Не удалось изменить таймер.',
             });
         }
     });
@@ -171,19 +187,25 @@ const registerGameHandlers = (_io, socket, gameService) => {
             });
         }
     });
-    socket.on('game:submit-answer', (payload) => {
+    socket.on('game:submit-answer', (payload, callback) => {
         try {
             if (!socket.data.sessionId || !socket.data.playerId) {
                 throw new Error('Player is not attached to a session');
             }
             const result = gameService.submitAnswer(socket.data.sessionId, socket.data.playerId, payload.answer);
             socket.emit('player:update', result.player);
+            callback?.({ success: true });
         }
         catch (error) {
+            const message = error instanceof Error ? error.message : 'Не удалось отправить ответ.';
+            const clientMessage = error instanceof Error && error.message === 'Answer contains inappropriate language'
+                ? 'Ответ не отправлен из-за недопустимой брани.'
+                : message;
             emitError(socket, {
                 code: 'SUBMIT_ANSWER_FAILED',
-                message: error instanceof Error ? error.message : 'Не удалось отправить ответ.',
+                message: clientMessage,
             });
+            callback?.({ success: false, message: clientMessage });
         }
     });
     socket.on('game:submit-guess', (payload, callback) => {
@@ -196,10 +218,15 @@ const registerGameHandlers = (_io, socket, gameService) => {
             callback?.(result.result);
         }
         catch (error) {
+            const message = error instanceof Error ? error.message : 'Не удалось отправить догадку.';
+            const clientMessage = error instanceof Error && error.message === 'Guess contains inappropriate language'
+                ? 'Ответ не отправлен из-за недопустимой брани.'
+                : message;
             emitError(socket, {
                 code: 'SUBMIT_GUESS_FAILED',
-                message: error instanceof Error ? error.message : 'Не удалось отправить догадку.',
+                message: clientMessage,
             });
+            callback?.({ matched: false, error: clientMessage });
         }
     });
     socket.on('disconnect', () => {

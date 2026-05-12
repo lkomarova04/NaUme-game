@@ -48,6 +48,9 @@ export interface SessionSettings {
   sharedCategory: string | 'all';
   roundsCount: number;
   roundCategories: string[];
+  answeringDurationSec: number;
+  guessingDurationSec: number;
+  startDelaySec: number;
 }
 
 export interface SessionState {
@@ -119,6 +122,10 @@ export interface ResetGamePayload extends SessionPhasePayload {
 
 export interface PauseTimerPayload extends SessionPhasePayload {
   paused: boolean;
+}
+
+export interface SetTimerPayload extends SessionPhasePayload {
+  durationSec: number;
 }
 
 export interface JoinSessionResponse {

@@ -17,6 +17,9 @@ export interface SessionSettings {
   sharedCategory: string | 'all';
   roundsCount: number;
   roundCategories: string[];
+  answeringDurationSec: number;
+  guessingDurationSec: number;
+  startDelaySec: number;
 }
 
 export interface SessionState {

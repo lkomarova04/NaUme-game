@@ -49,6 +49,7 @@
 }
 
 .admin-field select,
+.admin-field input,
 .admin-actions button,
 .admin-list-row button {
   width: 100%;
@@ -58,6 +59,16 @@
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-main);
   font: inherit;
+}
+
+.admin-field input {
+  padding: 0 12px;
+}
+
+.admin-timer-settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
 }
 
 .admin-actions {

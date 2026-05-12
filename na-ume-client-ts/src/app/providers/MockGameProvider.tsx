@@ -126,6 +126,9 @@ const createDefaultSession = (): SessionState => {
     sharedCategory: 'all',
     roundsCount: 5,
     roundCategories: Array.from({ length: 5 }, () => 'all'),
+    answeringDurationSec: 30,
+    guessingDurationSec: 200,
+    startDelaySec: 0,
   };
 
   return {
@@ -189,12 +192,12 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
     setPlayerId(newPlayer.id);
   };
 
-  const submitAnswer = (answer: string) => {
-    if (!session || !playerId) return;
-    if (session.phase !== 'answering') return;
+  const submitAnswer = async (answer: string) => {
+    if (!session || !playerId) return { success: false, message: 'Нет активной сессии.' };
+    if (session.phase !== 'answering') return { success: false, message: 'Сбор ответов закрыт.' };
 
     const trimmedAnswer = answer.trim();
-    if (!trimmedAnswer) return;
+    if (!trimmedAnswer) return { success: false, message: 'Ответ пустой.' };
 
     setSession((prev) => {
       if (!prev) return prev;
@@ -227,6 +230,8 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
         ),
       };
     });
+
+    return { success: true };
   };
 
   const submitGuess = async (guess: string) => {
@@ -450,6 +455,17 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
               ? {
                   ...prev,
                   phasePaused: paused,
+                }
+              : prev,
+          ),
+        setCurrentTimer: (durationSec: number) =>
+          setSession((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  phaseEndsAt: prev.phasePaused
+                    ? Math.max(0, durationSec * 1000)
+                    : Date.now() + Math.max(0, durationSec * 1000),
                 }
               : prev,
           ),

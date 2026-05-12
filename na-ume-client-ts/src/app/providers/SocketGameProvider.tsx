@@ -14,7 +14,8 @@ const SERVER_URL =
     ? import.meta.env.VITE_SERVER_URL
     : window.location.origin;
 type SocketRole = 'player' | 'organizer' | 'display';
-type GuessResult = { matched: boolean; answerText?: string } | null;
+type AnswerResult = { success: boolean; message?: string };
+type GuessResult = { matched: boolean; answerText?: string; error?: string } | null;
 type SocketAuthPayload = {
   sessionId?: string;
   role: SocketRole;
@@ -195,9 +196,22 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
           paused,
         });
       },
-      submitAnswer: (answer: string) => {
-        socketRef.current?.emit('game:submit-answer', {
-          answer,
+      setCurrentTimer: (durationSec: number) => {
+        if (!session) return;
+        socketRef.current?.emit('organizer:set-timer', {
+          sessionId: session.sessionId,
+          durationSec,
+        });
+      },
+      submitAnswer: async (answer: string) => {
+        if (!socketRef.current) {
+          return { success: false, message: 'Нет соединения с сервером.' };
+        }
+
+        return new Promise<AnswerResult>((resolve) => {
+          socketRef.current?.emit('game:submit-answer', { answer }, (result: AnswerResult) => {
+            resolve(result ?? { success: false, message: 'Не удалось отправить ответ.' });
+          });
         });
       },
       submitGuess: async (guess: string) => {
