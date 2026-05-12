@@ -75,6 +75,14 @@
   cursor: not-allowed;
 }
 
+.main-page__status {
+  margin: 14px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+
 @media (min-width: 1600px) {
   .main-page__body {
     width: min(100%, 560px);

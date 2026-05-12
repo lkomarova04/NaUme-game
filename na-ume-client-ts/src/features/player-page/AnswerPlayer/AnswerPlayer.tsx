@@ -5,9 +5,10 @@ type AnswerPlayerProps = {
   onChange: (value: string) => void;
   onStart: () => void;
   disabled?: boolean;
+  status?: string;
 }
 
-const AnswerPlayer = ({ value, onChange, onStart, disabled = false }: AnswerPlayerProps) => {
+const AnswerPlayer = ({ value, onChange, onStart, disabled = false, status }: AnswerPlayerProps) => {
   return (
     <div className="main-page">
       <div className="main-page__body">
@@ -28,6 +29,7 @@ const AnswerPlayer = ({ value, onChange, onStart, disabled = false }: AnswerPlay
         >
           Отправить
         </button>
+        {status ? <p className="main-page__status">{status}</p> : null}
       </div>
     </div>
   )

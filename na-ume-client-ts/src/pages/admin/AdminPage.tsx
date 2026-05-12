@@ -16,8 +16,11 @@ const AdminPage = () => {
     session,
     createSession,
     __setPhase,
+    startGame,
+    nextPhase,
     resetGame,
     setTimerPaused,
+    setCurrentTimer,
     revealTopAnswer,
     deleteRawAnswer,
     updateSettings,
@@ -51,6 +54,12 @@ const AdminPage = () => {
   }
 
   const { settings } = session;
+  const currentTimerSec =
+    session.phasePaused && session.phaseEndsAt > 0
+      ? Math.ceil(session.phaseEndsAt / 1000)
+      : session.phaseEndsAt > 0
+        ? Math.max(0, Math.ceil((session.phaseEndsAt - Date.now()) / 1000))
+        : 0;
 
   return (
     <div className="admin-page">
@@ -166,21 +175,83 @@ const AdminPage = () => {
               ))}
             </select>
           </label>
+
+          <div className="admin-timer-settings">
+            <label className="admin-field">
+              <span>Сбор ответов, сек.</span>
+              <input
+                type="number"
+                min={5}
+                max={3600}
+                value={settings.answeringDurationSec}
+                onChange={(event) =>
+                  updateSettings({
+                    ...settings,
+                    answeringDurationSec: Number(event.target.value),
+                  })
+                }
+              />
+            </label>
+
+            <label className="admin-field">
+              <span>Угадывание, сек.</span>
+              <input
+                type="number"
+                min={5}
+                max={3600}
+                value={settings.guessingDurationSec}
+                onChange={(event) =>
+                  updateSettings({
+                    ...settings,
+                    guessingDurationSec: Number(event.target.value),
+                  })
+                }
+              />
+            </label>
+
+            <label className="admin-field">
+              <span>Задержка старта, сек.</span>
+              <input
+                type="number"
+                min={0}
+                max={600}
+                value={settings.startDelaySec}
+                onChange={(event) =>
+                  updateSettings({
+                    ...settings,
+                    startDelaySec: Number(event.target.value),
+                  })
+                }
+              />
+            </label>
+          </div>
         </div>
 
         <div className="admin-card">
           <h2>Фаза игры</h2>
           <div className="admin-actions">
+            <button onClick={() => startGame()}>Запустить</button>
+            <button onClick={() => nextPhase()}>Следующая фаза</button>
             <button onClick={() => __setPhase('lobby')}>Lobby</button>
             <button onClick={() => __setPhase('answering')}>Сбор ответов</button>
-            <button onClick={() => __setPhase('guessing')}>Раунд 2</button>
-            <button onClick={() => __setPhase('reveal')}>Раскрытие</button>
+            <button onClick={() => __setPhase('guessing')}>Угадывание и топ</button>
             <button onClick={() => __setPhase('leaderboard')}>Лидеры</button>
             <button onClick={() => setTimerPaused(!session.phasePaused)}>
               {session.phasePaused ? 'Продолжить таймер' : 'Пауза таймера'}
             </button>
             <button onClick={() => resetGame()}>Сброс игры</button>
           </div>
+
+          <label className="admin-field">
+            <span>Текущее время таймера, сек.</span>
+            <input
+              type="number"
+              min={0}
+              max={3600}
+              value={currentTimerSec}
+              onChange={(event) => setCurrentTimer(Number(event.target.value))}
+            />
+          </label>
 
           <div className="admin-status">
             <strong>Текущий вопрос:</strong> {currentRound.question.text}

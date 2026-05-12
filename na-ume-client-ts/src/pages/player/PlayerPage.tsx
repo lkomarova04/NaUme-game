@@ -14,6 +14,7 @@ const PlayerPage = () => {
   const { session, player, joinSession, submitAnswer, submitGuess, __setPhase, connectionError } = useGame();
   const [playerName, setPlayerName] = useState('Игрок');
   const [answerText, setAnswerText] = useState('');
+  const [answerStatus, setAnswerStatus] = useState('');
   const [guessStatus, setGuessStatus] = useState('');
 
   const currentRound = session ? getCurrentRound(session) : undefined;
@@ -26,8 +27,21 @@ const PlayerPage = () => {
     setGuessStatus('');
   };
 
-  const handleAnswerSubmit = () => {
-    submitAnswer(answerText.trim());
+  const handleAnswerSubmit = async () => {
+    const normalizedAnswer = answerText.trim();
+
+    if (!normalizedAnswer) {
+      return;
+    }
+
+    const result = await submitAnswer(normalizedAnswer);
+
+    if (!result.success) {
+      setAnswerStatus(result.message ?? 'Ответ не отправлен.');
+      return;
+    }
+
+    setAnswerStatus('Ответ отправлен.');
     setAnswerText('');
   };
 
@@ -41,6 +55,11 @@ const PlayerPage = () => {
     const result = await submitGuess(normalizedGuess);
 
     if (!result) {
+      return;
+    }
+
+    if (result.error) {
+      setGuessStatus(result.error);
       return;
     }
 
@@ -82,6 +101,7 @@ const PlayerPage = () => {
           onChange={setAnswerText}
           onStart={handleAnswerSubmit}
           disabled={Boolean(player?.hasAnswered)}
+          status={answerStatus}
         />
       )}
 
