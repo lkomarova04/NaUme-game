@@ -181,6 +181,8 @@ run('normalizeText groups simple word forms together', () => {
 
 run('containsProfanity catches rude words without false positives for normal words', () => {
   assert.equal(containsProfanity(normalizeText('бляха')), true);
+  assert.equal(containsProfanity(normalizeText('какашка')), true);
+  assert.equal(containsProfanity(normalizeText('какаshka')), true);
   assert.equal(containsProfanity(normalizeText('лебедь')), false);
   assert.equal(containsProfanity(normalizeText('кофе')), false);
 });

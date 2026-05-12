@@ -144,6 +144,8 @@ run('normalizeText groups simple word forms together', () => {
 });
 run('containsProfanity catches rude words without false positives for normal words', () => {
     strict_1.default.equal((0, containsProfanity_1.containsProfanity)((0, normalizeText_1.normalizeText)('бляха')), true);
+    strict_1.default.equal((0, containsProfanity_1.containsProfanity)((0, normalizeText_1.normalizeText)('какашка')), true);
+    strict_1.default.equal((0, containsProfanity_1.containsProfanity)((0, normalizeText_1.normalizeText)('какаshka')), true);
     strict_1.default.equal((0, containsProfanity_1.containsProfanity)((0, normalizeText_1.normalizeText)('лебедь')), false);
     strict_1.default.equal((0, containsProfanity_1.containsProfanity)((0, normalizeText_1.normalizeText)('кофе')), false);
 });
