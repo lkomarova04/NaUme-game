@@ -27,7 +27,7 @@ describe('GameService', () => {
   it('opens answering phase immediately and delays answer submission until timer starts', () => {
     const { service } = createGameService();
     const session = service.createSession('Delayed Event');
-    const player = service.joinSession(session.sessionId, 'player', 'РРіСЂРѕРє', 'socket-player').player!;
+    const player = service.joinSession(session.sessionId, 'player', 'Игрок', 'socket-player').player!;
 
     service.updateSettings(session.sessionId, {
       ...session.settings,
@@ -38,19 +38,19 @@ describe('GameService', () => {
     expect(started.phase).toBe('answering');
     expect(started.phaseStartsAt).toBe(Date.now() + 5000);
     expect(started.phaseEndsAt).toBe(Date.now() + 35000);
-    expect(() => service.submitAnswer(session.sessionId, player.id, 'РљРѕС„Рµ')).toThrow(/Answers are closed/);
+    expect(() => service.submitAnswer(session.sessionId, player.id, 'Кофе')).toThrow(/Answers are closed/);
 
     jest.advanceTimersByTime(5000);
-    expect(service.submitAnswer(session.sessionId, player.id, 'РљРѕС„Рµ').player.hasAnswered).toBe(true);
+    expect(service.submitAnswer(session.sessionId, player.id, 'Кофе').player.hasAnswered).toBe(true);
   });
 
   it('aggregates top answers and awards more score for less popular answers', () => {
     const { service, topAnswersEvents } = createGameService();
     const session = service.createSession('Scoring Event');
 
-    const alice = service.joinSession(session.sessionId, 'player', 'РђР»РёСЃР°', 'socket-alice').player!;
-    const boris = service.joinSession(session.sessionId, 'player', 'Р‘РѕСЂРёСЃ', 'socket-boris').player!;
-    const vera = service.joinSession(session.sessionId, 'player', 'Р’РµСЂР°', 'socket-vera').player!;
+    const alice = service.joinSession(session.sessionId, 'player', 'Алиса', 'socket-alice').player!;
+    const boris = service.joinSession(session.sessionId, 'player', 'Борис', 'socket-boris').player!;
+    const vera = service.joinSession(session.sessionId, 'player', 'Вера', 'socket-vera').player!;
 
     service.startGame(session.sessionId);
     service.submitAnswer(session.sessionId, alice.id, 'coffee');
@@ -76,7 +76,7 @@ describe('GameService', () => {
   it('disconnect removes player from session roster', () => {
     const { service } = createGameService();
     const session = service.createSession('Disconnect Event');
-    const joinResult = service.joinSession(session.sessionId, 'player', 'РРіСЂРѕРє', 'socket-player');
+    const joinResult = service.joinSession(session.sessionId, 'player', 'Игрок', 'socket-player');
 
     expect(joinResult.success).toBe(true);
     expect(joinResult.session?.players).toHaveLength(1);
@@ -88,14 +88,14 @@ describe('GameService', () => {
   it('reset game returns session to lobby and preserves players with zeroed scores', () => {
     const { service } = createGameService();
     const session = service.createSession('Reset Event');
-    const alice = service.joinSession(session.sessionId, 'player', 'РђР»РёСЃР°', 'socket-alice').player!;
-    const boris = service.joinSession(session.sessionId, 'player', 'Р‘РѕСЂРёСЃ', 'socket-boris').player!;
+    const alice = service.joinSession(session.sessionId, 'player', 'Алиса', 'socket-alice').player!;
+    const boris = service.joinSession(session.sessionId, 'player', 'Борис', 'socket-boris').player!;
 
     service.startGame(session.sessionId);
-    service.submitAnswer(session.sessionId, alice.id, 'РљРѕС„Рµ');
-    service.submitAnswer(session.sessionId, boris.id, 'Р§Р°Р№');
+    service.submitAnswer(session.sessionId, alice.id, 'Кофе');
+    service.submitAnswer(session.sessionId, boris.id, 'Чай');
     service.nextPhase(session.sessionId);
-    service.submitGuess(session.sessionId, alice.id, 'РєРѕС„Рµ');
+    service.submitGuess(session.sessionId, alice.id, 'кофе');
 
     const reset = service.resetGame(session.sessionId, true);
     expect(reset.phase).toBe('lobby');
@@ -109,12 +109,12 @@ describe('GameService', () => {
   it('leaderboard appears only after last round', () => {
     const { service } = createGameService();
     const session = service.createSession('Round Flow Event');
-    const alice = service.joinSession(session.sessionId, 'player', 'РђР»РёСЃР°', 'socket-alice').player!;
-    const boris = service.joinSession(session.sessionId, 'player', 'Р‘РѕСЂРёСЃ', 'socket-boris').player!;
+    const alice = service.joinSession(session.sessionId, 'player', 'Алиса', 'socket-alice').player!;
+    const boris = service.joinSession(session.sessionId, 'player', 'Борис', 'socket-boris').player!;
 
     service.startGame(session.sessionId);
-    service.submitAnswer(session.sessionId, alice.id, 'РљРѕС„Рµ');
-    service.submitAnswer(session.sessionId, boris.id, 'Р§Р°Р№');
+    service.submitAnswer(session.sessionId, alice.id, 'Кофе');
+    service.submitAnswer(session.sessionId, boris.id, 'Чай');
     let state = service.nextPhase(session.sessionId);
     expect(state.phase).toBe('guessing');
 
@@ -126,7 +126,7 @@ describe('GameService', () => {
       const currentPlayers = service.getSession(session.sessionId)?.players ?? [];
 
       for (const [playerIndex, currentPlayer] of currentPlayers.entries()) {
-        service.submitAnswer(session.sessionId, currentPlayer.id, `РћС‚РІРµС‚ ${roundIndex}-${playerIndex}`);
+        service.submitAnswer(session.sessionId, currentPlayer.id, `Ответ ${roundIndex}-${playerIndex}`);
       }
 
       state = service.nextPhase(session.sessionId);
@@ -163,7 +163,7 @@ describe('GameService', () => {
   it('inappropriate answer does not count and does not lock the player', () => {
     const { service } = createGameService();
     const session = service.createSession('Moderation Event');
-    const player = service.joinSession(session.sessionId, 'player', 'РРіСЂРѕРє', 'socket-player').player!;
+    const player = service.joinSession(session.sessionId, 'player', 'Игрок', 'socket-player').player!;
 
     service.startGame(session.sessionId);
     expect(() => service.submitAnswer(session.sessionId, player.id, 'kakashka')).toThrow(/inappropriate language/);
