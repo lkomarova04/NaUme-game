@@ -1,16 +1,23 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const node_test_1 = __importDefault(require("node:test"));
-const strict_1 = __importDefault(require("node:assert/strict"));
+const containsProfanity_1 = require("./containsProfanity");
 const normalizeText_1 = require("./normalizeText");
-(0, node_test_1.default)('normalizeText lowercases, trims, removes punctuation and collapses spaces', () => {
-    const result = (0, normalizeText_1.normalizeText)('  ПрИвЕт,   мир!!!  2026  ');
-    strict_1.default.equal(result, 'привет мир 2026');
+describe('normalizeText', () => {
+    it('lowercases, trims and removes punctuation', () => {
+        const result = (0, normalizeText_1.normalizeText)('  Hello,   WORLD!!!  2026  ');
+        expect(result).toBe('hello world 2026');
+    });
+    it('removes separators and keeps letters and digits', () => {
+        const result = (0, normalizeText_1.normalizeText)('test-set #1 / super');
+        expect(result).toBe('test set 1 super');
+    });
+    it('keeps equal answers comparable after case changes', () => {
+        expect((0, normalizeText_1.normalizeText)('Coffee')).toBe((0, normalizeText_1.normalizeText)(' coffee '));
+    });
 });
-(0, node_test_1.default)('normalizeText keeps letters and digits, but removes separators', () => {
-    const result = (0, normalizeText_1.normalizeText)('Тест-набор №1 / super');
-    strict_1.default.equal(result, 'тест набор 1 super');
+describe('containsProfanity', () => {
+    it('catches rude words without false positives for normal words', () => {
+        expect((0, containsProfanity_1.containsProfanity)((0, normalizeText_1.normalizeText)('kakashka'))).toBe(true);
+        expect((0, containsProfanity_1.containsProfanity)((0, normalizeText_1.normalizeText)('coffee'))).toBe(false);
+    });
 });

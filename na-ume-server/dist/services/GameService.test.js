@@ -1,79 +1,142 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const node_test_1 = __importDefault(require("node:test"));
-const strict_1 = __importDefault(require("node:assert/strict"));
-const HistoryRepository_1 = require("../repositories/HistoryRepository");
-const InMemorySessionRepository_1 = require("../repositories/InMemorySessionRepository");
-const GameService_1 = require("./GameService");
-const createGameService = () => {
-    const sessionUpdates = [];
-    const topAnswersEvents = [];
-    const service = new GameService_1.GameService(new InMemorySessionRepository_1.InMemorySessionRepository(), new HistoryRepository_1.NoopHistoryRepository(), {
-        onSessionUpdate: (session) => {
-            sessionUpdates.push(session);
-        },
-        onTopAnswers: (sessionId, topAnswers) => {
-            topAnswersEvents.push({ sessionId, topAnswers });
-        },
+const testUtils_1 = require("../test/testUtils");
+beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-05-13T10:00:00.000Z'));
+});
+afterEach(() => {
+    jest.useRealTimers();
+});
+describe('GameService', () => {
+    it('creates session and starts answering phase', () => {
+        const { service } = (0, testUtils_1.createGameService)();
+        const session = service.createSession('Demo Event');
+        expect(session.phase).toBe('lobby');
+        expect(session.eventName).toBe('Demo Event');
+        expect(session.sessionId.length).toBeGreaterThanOrEqual(6);
+        const started = service.startGame(session.sessionId);
+        expect(started.phase).toBe('answering');
+        expect(started.roundIndex).toBe(0);
+        expect(started.phaseEndsAt).toBeGreaterThan(Date.now());
     });
-    return { service, sessionUpdates, topAnswersEvents };
-};
-(0, node_test_1.default)('organizer can create session and start the game in answering phase', () => {
-    const { service } = createGameService();
-    const session = service.createSession('Demo Event');
-    strict_1.default.equal(session.phase, 'lobby');
-    strict_1.default.equal(session.eventName, 'Demo Event');
-    strict_1.default.ok(session.sessionId.length >= 6);
-    const started = service.startGame(session.sessionId);
-    strict_1.default.equal(started.phase, 'answering');
-    strict_1.default.equal(started.roundIndex, 0);
-    strict_1.default.ok(started.phaseEndsAt > Date.now());
-    service.nextPhase(session.sessionId);
-    service.nextPhase(session.sessionId);
-    service.nextPhase(session.sessionId);
-    service.nextPhase(session.sessionId);
-});
-(0, node_test_1.default)('answers are aggregated into top answers and guesses award score', () => {
-    const { service, topAnswersEvents } = createGameService();
-    const session = service.createSession('Scoring Event');
-    const aliceJoin = service.joinSession(session.sessionId, 'player', 'Алиса', 'socket-alice');
-    const borisJoin = service.joinSession(session.sessionId, 'player', 'Борис', 'socket-boris');
-    const veraJoin = service.joinSession(session.sessionId, 'player', 'Вера', 'socket-vera');
-    strict_1.default.equal(aliceJoin.success, true);
-    strict_1.default.equal(borisJoin.success, true);
-    strict_1.default.equal(veraJoin.success, true);
-    const alice = aliceJoin.player;
-    const boris = borisJoin.player;
-    const vera = veraJoin.player;
-    service.startGame(session.sessionId);
-    service.submitAnswer(session.sessionId, alice.id, 'Кофе');
-    service.submitAnswer(session.sessionId, boris.id, ' кофе ');
-    service.submitAnswer(session.sessionId, vera.id, 'Чай');
-    const afterGuessingStart = service.nextPhase(session.sessionId);
-    strict_1.default.equal(afterGuessingStart.phase, 'guessing');
-    strict_1.default.equal(topAnswersEvents.length, 1);
-    strict_1.default.equal(topAnswersEvents[0].topAnswers[0]?.text, 'Кофе');
-    strict_1.default.equal(topAnswersEvents[0].topAnswers[0]?.percentage, 67);
-    const guessResult = service.submitGuess(session.sessionId, alice.id, 'кофе');
-    strict_1.default.equal(guessResult.result.matched, true);
-    strict_1.default.equal(guessResult.player.score, 67);
-    const missResult = service.submitGuess(session.sessionId, boris.id, 'сок');
-    strict_1.default.equal(missResult.result.matched, false);
-    strict_1.default.equal(missResult.player.score, 0);
-    service.nextPhase(session.sessionId);
-    service.revealAnswer(session.sessionId, 1);
-    service.revealAnswer(session.sessionId, 0);
-});
-(0, node_test_1.default)('disconnect removes player from session roster', () => {
-    const { service } = createGameService();
-    const session = service.createSession('Disconnect Event');
-    const joinResult = service.joinSession(session.sessionId, 'player', 'Игрок', 'socket-player');
-    strict_1.default.equal(joinResult.success, true);
-    strict_1.default.equal(joinResult.session?.players.length, 1);
-    service.disconnectPlayer(session.sessionId, joinResult.player?.id, 'socket-player');
-    const updatedSession = service.getSession(session.sessionId);
-    strict_1.default.equal(updatedSession?.players.length, 0);
+    it('opens answering phase immediately and delays answer submission until timer starts', () => {
+        const { service } = (0, testUtils_1.createGameService)();
+        const session = service.createSession('Delayed Event');
+        const player = service.joinSession(session.sessionId, 'player', 'РРіСЂРѕРє', 'socket-player').player;
+        service.updateSettings(session.sessionId, {
+            ...session.settings,
+            startDelaySec: 5,
+        });
+        const started = service.startGame(session.sessionId);
+        expect(started.phase).toBe('answering');
+        expect(started.phaseStartsAt).toBe(Date.now() + 5000);
+        expect(started.phaseEndsAt).toBe(Date.now() + 35000);
+        expect(() => service.submitAnswer(session.sessionId, player.id, 'РљРѕС„Рµ')).toThrow(/Answers are closed/);
+        jest.advanceTimersByTime(5000);
+        expect(service.submitAnswer(session.sessionId, player.id, 'РљРѕС„Рµ').player.hasAnswered).toBe(true);
+    });
+    it('aggregates top answers and awards more score for less popular answers', () => {
+        const { service, topAnswersEvents } = (0, testUtils_1.createGameService)();
+        const session = service.createSession('Scoring Event');
+        const alice = service.joinSession(session.sessionId, 'player', 'РђР»РёСЃР°', 'socket-alice').player;
+        const boris = service.joinSession(session.sessionId, 'player', 'Р‘РѕСЂРёСЃ', 'socket-boris').player;
+        const vera = service.joinSession(session.sessionId, 'player', 'Р’РµСЂР°', 'socket-vera').player;
+        service.startGame(session.sessionId);
+        service.submitAnswer(session.sessionId, alice.id, 'coffee');
+        service.submitAnswer(session.sessionId, boris.id, ' coffee ');
+        service.submitAnswer(session.sessionId, vera.id, 'tea');
+        const afterGuessingStart = service.nextPhase(session.sessionId);
+        expect(afterGuessingStart.phase).toBe('guessing');
+        expect(topAnswersEvents).toHaveLength(1);
+        expect(topAnswersEvents[0].topAnswers[0]?.text).toBe('coffee');
+        expect(topAnswersEvents[0].topAnswers[0]?.percentage).toBe(67);
+        const popularGuess = service.submitGuess(session.sessionId, alice.id, 'coffee');
+        expect(popularGuess.result.matched).toBe(true);
+        expect(popularGuess.player.score).toBe(133);
+        const rareGuess = service.submitGuess(session.sessionId, boris.id, 'tea');
+        expect(rareGuess.result.matched).toBe(true);
+        expect(rareGuess.player.score).toBe(167);
+        expect(rareGuess.player.score).toBeGreaterThan(popularGuess.player.score);
+    });
+    it('disconnect removes player from session roster', () => {
+        const { service } = (0, testUtils_1.createGameService)();
+        const session = service.createSession('Disconnect Event');
+        const joinResult = service.joinSession(session.sessionId, 'player', 'РРіСЂРѕРє', 'socket-player');
+        expect(joinResult.success).toBe(true);
+        expect(joinResult.session?.players).toHaveLength(1);
+        service.disconnectPlayer(session.sessionId, joinResult.player?.id, 'socket-player');
+        expect(service.getSession(session.sessionId)?.players).toHaveLength(0);
+    });
+    it('reset game returns session to lobby and preserves players with zeroed scores', () => {
+        const { service } = (0, testUtils_1.createGameService)();
+        const session = service.createSession('Reset Event');
+        const alice = service.joinSession(session.sessionId, 'player', 'РђР»РёСЃР°', 'socket-alice').player;
+        const boris = service.joinSession(session.sessionId, 'player', 'Р‘РѕСЂРёСЃ', 'socket-boris').player;
+        service.startGame(session.sessionId);
+        service.submitAnswer(session.sessionId, alice.id, 'РљРѕС„Рµ');
+        service.submitAnswer(session.sessionId, boris.id, 'Р§Р°Р№');
+        service.nextPhase(session.sessionId);
+        service.submitGuess(session.sessionId, alice.id, 'РєРѕС„Рµ');
+        const reset = service.resetGame(session.sessionId, true);
+        expect(reset.phase).toBe('lobby');
+        expect(reset.roundIndex).toBe(0);
+        expect(reset.players).toHaveLength(2);
+        expect(reset.players[0]?.score).toBe(0);
+        expect(reset.rounds[0]?.answers).toHaveLength(0);
+        expect(reset.rounds[0]?.topAnswers).toHaveLength(0);
+    });
+    it('leaderboard appears only after last round', () => {
+        const { service } = (0, testUtils_1.createGameService)();
+        const session = service.createSession('Round Flow Event');
+        const alice = service.joinSession(session.sessionId, 'player', 'РђР»РёСЃР°', 'socket-alice').player;
+        const boris = service.joinSession(session.sessionId, 'player', 'Р‘РѕСЂРёСЃ', 'socket-boris').player;
+        service.startGame(session.sessionId);
+        service.submitAnswer(session.sessionId, alice.id, 'РљРѕС„Рµ');
+        service.submitAnswer(session.sessionId, boris.id, 'Р§Р°Р№');
+        let state = service.nextPhase(session.sessionId);
+        expect(state.phase).toBe('guessing');
+        state = service.nextPhase(session.sessionId);
+        expect(state.phase).toBe('answering');
+        expect(state.roundIndex).toBe(1);
+        for (let roundIndex = 1; roundIndex < state.rounds.length; roundIndex += 1) {
+            const currentPlayers = service.getSession(session.sessionId)?.players ?? [];
+            for (const [playerIndex, currentPlayer] of currentPlayers.entries()) {
+                service.submitAnswer(session.sessionId, currentPlayer.id, `РћС‚РІРµС‚ ${roundIndex}-${playerIndex}`);
+            }
+            state = service.nextPhase(session.sessionId);
+            expect(state.phase).toBe('guessing');
+            if (roundIndex < state.rounds.length - 1) {
+                state = service.nextPhase(session.sessionId);
+                expect(state.phase).toBe('answering');
+                expect(state.roundIndex).toBe(roundIndex + 1);
+            }
+        }
+        expect(service.nextPhase(session.sessionId).phase).toBe('leaderboard');
+    });
+    it('pause timer preserves phase and resumes countdown', () => {
+        const { service } = (0, testUtils_1.createGameService)();
+        const session = service.createSession('Pause Event');
+        const started = service.startGame(session.sessionId);
+        expect(started.phasePaused).toBe(false);
+        expect(started.phaseEndsAt).toBeGreaterThan(Date.now());
+        jest.advanceTimersByTime(1000);
+        const paused = service.setTimerPaused(session.sessionId, true);
+        expect(paused.phasePaused).toBe(true);
+        expect(paused.phaseEndsAt).toBeGreaterThan(0);
+        const resumed = service.setTimerPaused(session.sessionId, false);
+        expect(resumed.phasePaused).toBe(false);
+        expect(resumed.phaseEndsAt).toBeGreaterThan(Date.now());
+    });
+    it('inappropriate answer does not count and does not lock the player', () => {
+        const { service } = (0, testUtils_1.createGameService)();
+        const session = service.createSession('Moderation Event');
+        const player = service.joinSession(session.sessionId, 'player', 'РРіСЂРѕРє', 'socket-player').player;
+        service.startGame(session.sessionId);
+        expect(() => service.submitAnswer(session.sessionId, player.id, 'kakashka')).toThrow(/inappropriate language/);
+        const updatedSession = service.getSession(session.sessionId);
+        const updatedPlayer = updatedSession.players.find((item) => item.id === player.id);
+        expect(updatedSession.rounds[0]?.answers).toHaveLength(0);
+        expect(updatedPlayer.hasAnswered).toBe(false);
+    });
 });

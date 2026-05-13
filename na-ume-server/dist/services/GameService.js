@@ -50,7 +50,13 @@ class GameService {
                 session.playerSockets.set(player.id, sockets);
             }
         }
-        this.persistAndBroadcast(session);
+        this.persist(session, { durable: false });
+        if (player) {
+            this.emitGameEvent(session, {
+                type: 'player_joined',
+                player: this.clonePlayer(player),
+            });
+        }
         return {
             success: true,
             player,
@@ -64,25 +70,8 @@ class GameService {
         }
         session.isActive = true;
         session.roundIndex = Math.min(session.roundIndex, session.rounds.length - 1);
-        const startDelayMs = this.getStartDelayMs(session);
-        if (startDelayMs > 0) {
-            this.clearTimer(session);
-            session.phasePaused = false;
-            session.phaseEndsAt = Date.now() + startDelayMs;
-            session.timer = setTimeout(() => {
-                try {
-                    this.prepareRoundPlayers(session);
-                    this.setPhase(session, 'answering', this.getAnsweringDurationMs(session));
-                }
-                catch (error) {
-                    console.error('Failed to start delayed phase', error);
-                }
-            }, startDelayMs);
-            this.persistAndBroadcast(session);
-            return this.toSessionState(session);
-        }
         this.prepareRoundPlayers(session);
-        this.setPhase(session, 'answering', this.getAnsweringDurationMs(session));
+        this.setPhase(session, 'answering', this.getAnsweringDurationMs(session), this.getStartDelayMs(session));
         return this.toSessionState(session);
     }
     nextPhase(sessionId) {
@@ -119,7 +108,7 @@ class GameService {
             case 'answering':
                 session.isActive = true;
                 this.prepareRoundPlayers(session);
-                this.setPhase(session, 'answering', this.getAnsweringDurationMs(session));
+                this.setPhase(session, 'answering', this.getAnsweringDurationMs(session), this.getStartDelayMs(session));
                 break;
             case 'guessing': {
                 const round = this.getCurrentRound(session);
@@ -155,6 +144,7 @@ class GameService {
         session.players = preservedPlayers;
         session.roundIndex = 0;
         session.phase = 'lobby';
+        session.phaseStartsAt = 0;
         session.phaseEndsAt = 0;
         session.phasePaused = false;
         session.isActive = false;
@@ -176,7 +166,12 @@ class GameService {
             throw new Error('Top answer not found');
         }
         targetAnswer.revealed = !targetAnswer.revealed;
-        this.persistAndBroadcast(session);
+        this.persist(session, { durable: true });
+        this.emitGameEvent(session, {
+            type: 'answer_revealed',
+            roundIndex: session.roundIndex,
+            answer: this.cloneTopAnswer(targetAnswer),
+        });
         return this.toSessionState(session);
     }
     setTimerPaused(sessionId, paused) {
@@ -191,8 +186,15 @@ class GameService {
             const remainingMs = Math.max(0, session.phaseEndsAt - Date.now());
             this.clearTimer(session);
             session.phasePaused = true;
+            session.phaseStartsAt = 0;
             session.phaseEndsAt = remainingMs;
-            this.persistAndBroadcast(session);
+            this.persist(session, { durable: true });
+            this.emitGameEvent(session, {
+                type: 'timer_changed',
+                phaseStartsAt: session.phaseStartsAt,
+                phaseEndsAt: session.phaseEndsAt,
+                phasePaused: session.phasePaused,
+            });
             return this.toSessionState(session);
         }
         if (!session.phasePaused) {
@@ -204,7 +206,7 @@ class GameService {
     }
     submitAnswer(sessionId, playerId, answer) {
         const session = this.requireSession(sessionId);
-        if (session.phase !== 'answering') {
+        if (session.phase !== 'answering' || this.isPhaseWaitingToStart(session)) {
             throw new Error('Answers are closed');
         }
         const player = session.players.find((item) => item.id === playerId);
@@ -232,9 +234,14 @@ class GameService {
         const round = this.getCurrentRound(session);
         round.answers.push(rawAnswer);
         player.hasAnswered = true;
-        this.persistAndBroadcast(session);
+        this.persist(session, { durable: false });
+        this.emitGameEvent(session, {
+            type: 'answer_submitted',
+            roundIndex: session.roundIndex,
+            answer: { ...rawAnswer },
+            player: this.clonePlayer(player),
+        });
         return {
-            session: this.toSessionState(session),
             player: this.clonePlayer(player),
         };
     }
@@ -261,7 +268,7 @@ class GameService {
         const matchedAnswer = round.topAnswers.find((answerItem) => answerItem.normalizedText === normalizedGuess);
         let guessResult = { matched: false, pointsAwarded: 0 };
         if (matchedAnswer) {
-            const awardedPoints = Math.round(env_1.env.basePoints * (matchedAnswer.percentage / 100));
+            const awardedPoints = this.calculateGuessPoints(matchedAnswer);
             matchedAnswer.matchedBy = Array.from(new Set([...matchedAnswer.matchedBy, player.id]));
             matchedAnswer.revealed = true;
             player.score += awardedPoints;
@@ -272,9 +279,14 @@ class GameService {
             };
         }
         player.hasGuessed = true;
-        this.persistAndBroadcast(session);
+        this.persist(session, { durable: false });
+        this.emitGameEvent(session, {
+            type: 'guess_submitted',
+            roundIndex: session.roundIndex,
+            player: this.clonePlayer(player),
+            answer: matchedAnswer ? this.cloneTopAnswer(matchedAnswer) : undefined,
+        });
         return {
-            session: this.toSessionState(session),
             player: this.clonePlayer(player),
             result: guessResult,
         };
@@ -293,7 +305,11 @@ class GameService {
             }
         }
         session.players = session.players.filter((player) => player.id !== playerId);
-        this.persistAndBroadcast(session);
+        this.persist(session, { durable: false });
+        this.emitGameEvent(session, {
+            type: 'player_left',
+            playerId,
+        });
     }
     getPlayerSockets(sessionId, playerId) {
         const session = this.sessions.get(sessionId);
@@ -301,6 +317,7 @@ class GameService {
     }
     updateSettings(sessionId, settings) {
         const session = this.requireSession(sessionId);
+        const previousSettings = session.settings;
         session.settings = {
             ...settings,
             roundCategories: [...settings.roundCategories],
@@ -308,7 +325,9 @@ class GameService {
             guessingDurationSec: this.clampTimerSeconds(settings.guessingDurationSec),
             startDelaySec: this.clampDelaySeconds(settings.startDelaySec),
         };
-        session.rounds = this.buildRoundsFromSettings(session.settings);
+        if (this.shouldRebuildRounds(previousSettings, session.settings)) {
+            session.rounds = this.buildRoundsFromSettings(session.settings);
+        }
         session.roundIndex = Math.min(session.roundIndex, session.rounds.length - 1);
         this.persistAndBroadcast(session);
         return this.toSessionState(session);
@@ -316,7 +335,11 @@ class GameService {
     setRound(sessionId, roundIndex) {
         const session = this.requireSession(sessionId);
         session.roundIndex = Math.max(0, Math.min(roundIndex, session.rounds.length - 1));
-        this.persistAndBroadcast(session);
+        this.persist(session, { durable: true });
+        this.emitGameEvent(session, {
+            type: 'round_changed',
+            roundIndex: session.roundIndex,
+        });
         return this.toSessionState(session);
     }
     deleteAnswer(sessionId, answerId) {
@@ -326,14 +349,26 @@ class GameService {
         if (session.phase === 'guessing' || session.phase === 'reveal' || session.phase === 'leaderboard') {
             currentRound.topAnswers = this.buildTopAnswers(currentRound.answers, currentRound.question.id);
         }
-        this.persistAndBroadcast(session);
+        this.persist(session, { durable: true });
+        this.emitGameEvent(session, {
+            type: 'answer_deleted',
+            roundIndex: session.roundIndex,
+            answerId,
+            topAnswers: this.cloneTopAnswers(currentRound.topAnswers),
+        });
         return this.toSessionState(session);
     }
     setCurrentTimer(sessionId, durationSec) {
         const session = this.requireSession(sessionId);
         if (session.phase === 'lobby' || session.phasePaused) {
             session.phaseEndsAt = Math.max(0, this.clampTimerSeconds(durationSec) * 1000);
-            this.persistAndBroadcast(session);
+            this.persist(session, { durable: true });
+            this.emitGameEvent(session, {
+                type: 'timer_changed',
+                phaseStartsAt: session.phaseStartsAt,
+                phaseEndsAt: session.phaseEndsAt,
+                phasePaused: session.phasePaused,
+            });
             return this.toSessionState(session);
         }
         this.setPhase(session, session.phase, this.clampTimerSeconds(durationSec) * 1000);
@@ -351,7 +386,7 @@ class GameService {
         if (hasNextRound) {
             session.roundIndex += 1;
             this.prepareRoundPlayers(session);
-            this.setPhase(session, 'answering', this.getAnsweringDurationMs(session));
+            this.setPhase(session, 'answering', this.getAnsweringDurationMs(session), this.getStartDelayMs(session));
             return;
         }
         this.setPhase(session, 'leaderboard', env_1.env.leaderboardDurationMs);
@@ -372,11 +407,12 @@ class GameService {
             hasGuessed: resetGuesses ? false : player.hasGuessed,
         }));
     }
-    setPhase(session, phase, durationMs) {
+    setPhase(session, phase, durationMs, delayMs = 0) {
         this.clearTimer(session);
         session.phase = phase;
         session.phasePaused = false;
-        session.phaseEndsAt = durationMs > 0 ? Date.now() + durationMs : 0;
+        session.phaseStartsAt = delayMs > 0 ? Date.now() + delayMs : 0;
+        session.phaseEndsAt = durationMs > 0 ? Date.now() + delayMs + durationMs : 0;
         if (durationMs > 0) {
             session.timer = setTimeout(() => {
                 try {
@@ -385,9 +421,19 @@ class GameService {
                 catch (error) {
                     console.error('Failed to auto-advance phase', error);
                 }
-            }, durationMs);
+            }, delayMs + durationMs);
         }
-        this.persistAndBroadcast(session);
+        this.persist(session, { durable: true });
+        this.emitGameEvent(session, {
+            type: 'phase_changed',
+            phase: session.phase,
+            roundIndex: session.roundIndex,
+            phaseStartsAt: session.phaseStartsAt,
+            phaseEndsAt: session.phaseEndsAt,
+            phasePaused: session.phasePaused,
+            players: session.players.map((player) => this.clonePlayer(player)),
+            topAnswers: this.cloneTopAnswers(this.getCurrentRound(session).topAnswers),
+        });
     }
     clearTimer(session) {
         if (session.timer) {
@@ -396,8 +442,14 @@ class GameService {
         }
     }
     persistAndBroadcast(session) {
-        this.sessions.update(session);
+        this.persist(session, { durable: true });
         this.hooks.onSessionUpdate?.(this.toSessionState(session));
+    }
+    persist(session, options = {}) {
+        this.sessions.update(session, options);
+    }
+    emitGameEvent(session, event) {
+        this.hooks.onGameEvent?.(session.sessionId, event);
     }
     buildTopAnswers(answers, questionId) {
         const approvedAnswers = answers.filter((answer) => !answer.isRejected && answer.normalizedText);
@@ -438,6 +490,19 @@ class GameService {
                     matchedBy: [],
                 },
             ];
+    }
+    calculateGuessPoints(answer) {
+        const rarityMultiplier = 1 + (100 - Math.max(0, Math.min(100, answer.percentage))) / 100;
+        return Math.max(1, Math.round(env_1.env.basePoints * rarityMultiplier));
+    }
+    isPhaseWaitingToStart(session) {
+        return session.phaseStartsAt > Date.now();
+    }
+    shouldRebuildRounds(currentSettings, nextSettings) {
+        return (currentSettings.categoryMode !== nextSettings.categoryMode ||
+            currentSettings.sharedCategory !== nextSettings.sharedCategory ||
+            currentSettings.roundsCount !== nextSettings.roundsCount ||
+            currentSettings.roundCategories.join('\u0000') !== nextSettings.roundCategories.join('\u0000'));
     }
     findOrCreatePlayer(session, playerName) {
         const existingPlayer = session.players.find((player) => player.name === playerName);
@@ -483,6 +548,7 @@ class GameService {
             },
             availableQuestions: [...this.questionBank],
             categories,
+            phaseStartsAt: 0,
             phaseEndsAt: 0,
             phasePaused: false,
             isActive: false,
@@ -559,6 +625,7 @@ class GameService {
             },
             availableQuestions: session.availableQuestions.map((question) => ({ ...question })),
             categories: [...session.categories],
+            phaseStartsAt: session.phaseStartsAt ?? 0,
             phaseEndsAt: session.phaseEndsAt,
             phasePaused: session.phasePaused,
             isActive: session.isActive,
@@ -567,11 +634,14 @@ class GameService {
     clonePlayer(player) {
         return { ...player };
     }
-    cloneTopAnswers(topAnswers) {
-        return topAnswers.map((answer) => ({
+    cloneTopAnswer(answer) {
+        return {
             ...answer,
             matchedBy: [...answer.matchedBy],
-        }));
+        };
+    }
+    cloneTopAnswers(topAnswers) {
+        return topAnswers.map((answer) => this.cloneTopAnswer(answer));
     }
 }
 exports.GameService = GameService;
