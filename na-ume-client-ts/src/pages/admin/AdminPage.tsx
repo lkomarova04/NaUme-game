@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { useGame } from '@/app/providers/game-context';
@@ -28,11 +28,30 @@ const AdminPage = () => {
   } = useGame();
   const [eventName, setEventName] = useState('На уме');
 
+  const [currentTimerDraft, setCurrentTimerDraft] = useState('0');
   const currentRound = session ? getCurrentRound(session) : undefined;
 
   const playersMap = useMemo(() => {
     return new Map(session?.players.map((player) => [player.id, player.name]) ?? []);
   }, [session?.players]);
+
+  const currentTimerSec =
+    session?.phasePaused && session.phaseEndsAt > 0
+      ? Math.ceil(session.phaseEndsAt / 1000)
+      : session?.phaseEndsAt && session.phaseEndsAt > 0
+        ? Math.max(0, Math.ceil((session.phaseEndsAt - Date.now()) / 1000))
+        : 0;
+
+  useEffect(() => {
+    setCurrentTimerDraft(String(currentTimerSec));
+  }, [currentTimerSec]);
+
+  const commitCurrentTimer = () => {
+    const nextValue = Number(currentTimerDraft);
+    if (Number.isFinite(nextValue)) {
+      setCurrentTimer(nextValue);
+    }
+  };
 
   if (!sessionId && !session) {
     return (
@@ -54,12 +73,6 @@ const AdminPage = () => {
   }
 
   const { settings } = session;
-  const currentTimerSec =
-    session.phasePaused && session.phaseEndsAt > 0
-      ? Math.ceil(session.phaseEndsAt / 1000)
-      : session.phaseEndsAt > 0
-        ? Math.max(0, Math.ceil((session.phaseEndsAt - Date.now()) / 1000))
-        : 0;
 
   return (
     <div className="admin-page">
@@ -248,8 +261,15 @@ const AdminPage = () => {
               type="number"
               min={0}
               max={3600}
-              value={currentTimerSec}
-              onChange={(event) => setCurrentTimer(Number(event.target.value))}
+              value={currentTimerDraft}
+              onChange={(event) => setCurrentTimerDraft(event.target.value)}
+              onBlur={commitCurrentTimer}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  commitCurrentTimer();
+                  event.currentTarget.blur();
+                }
+              }}
             />
           </label>
 

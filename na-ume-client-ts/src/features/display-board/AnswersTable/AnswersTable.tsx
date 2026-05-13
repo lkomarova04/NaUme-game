@@ -9,6 +9,7 @@ type AnswersTableProps = {
   question: Question;
   currentRound: number;
   totalRounds: number;
+  phaseStartsAt?: number;
   phaseEndsAt?: number;
   phasePaused?: boolean;
   answers: TopAnswer[];
@@ -19,10 +20,11 @@ const AnswersTable = ({
   question,
   currentRound,
   totalRounds,
+  phaseStartsAt = 0,
   phaseEndsAt,
   phasePaused = false,
 }: AnswersTableProps) => {
-  const timeLeft = useTimer(phaseEndsAt, phasePaused);
+  const timeLeft = useTimer(phaseEndsAt, phasePaused, phaseStartsAt);
 
   return (
     <div className="answers-table">

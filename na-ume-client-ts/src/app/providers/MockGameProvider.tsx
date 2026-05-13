@@ -119,6 +119,15 @@ const rebuildTopAnswers = (answers: RawAnswer[], prevTopAnswers: TopAnswer[]) =>
   });
 };
 
+const shouldRebuildRounds = (currentSettings: SessionSettings, nextSettings: SessionSettings) => {
+  return (
+    currentSettings.categoryMode !== nextSettings.categoryMode ||
+    currentSettings.sharedCategory !== nextSettings.sharedCategory ||
+    currentSettings.roundsCount !== nextSettings.roundsCount ||
+    currentSettings.roundCategories.join('\u0000') !== nextSettings.roundCategories.join('\u0000')
+  );
+};
+
 const createDefaultSession = (): SessionState => {
   const categories = Array.from(new Set(mockQuestions.map((item) => item.category)));
   const settings: SessionSettings = {
@@ -141,6 +150,7 @@ const createDefaultSession = (): SessionState => {
     settings,
     availableQuestions: mockQuestions,
     categories,
+    phaseStartsAt: 0,
     phaseEndsAt: 0,
     phasePaused: false,
     isActive: true,
@@ -210,6 +220,7 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
           id: `raw-${Date.now()}`,
           playerId,
           text: trimmedAnswer,
+          normalizedText: normalizeText(trimmedAnswer),
           roundIndex: prev.roundIndex,
           createdAt: Date.now(),
           isRejected: false,
@@ -277,7 +288,9 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
             ? {
                 ...item,
                 hasGuessed: true,
-                score: matchingAnswer ? item.score + matchingAnswer.count * 10 : item.score,
+                score: matchingAnswer
+                  ? item.score + Math.max(1, Math.round(100 * (1 + (100 - matchingAnswer.percentage) / 100)))
+                  : item.score,
               }
             : item,
         ),
@@ -345,8 +358,8 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
       return {
         ...prev,
         settings: nextSettings,
-        roundIndex: 0,
-        rounds: buildRounds(nextSettings),
+        roundIndex: shouldRebuildRounds(prev.settings, nextSettings) ? 0 : prev.roundIndex,
+        rounds: shouldRebuildRounds(prev.settings, nextSettings) ? buildRounds(nextSettings) : prev.rounds,
       };
     });
   };
@@ -369,7 +382,11 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
       return {
         ...prev,
         phase,
-        phaseEndsAt: Date.now() + PHASE_DURATIONS[phase],
+        phaseStartsAt: phase === 'answering' ? Date.now() + prev.settings.startDelaySec * 1000 : 0,
+        phaseEndsAt:
+          phase === 'answering'
+            ? Date.now() + prev.settings.startDelaySec * 1000 + PHASE_DURATIONS[phase]
+            : Date.now() + PHASE_DURATIONS[phase],
         phasePaused: false,
         players: prev.players.map((item) => ({
           ...item,
@@ -455,6 +472,7 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
               ? {
                   ...prev,
                   phasePaused: paused,
+                  phaseStartsAt: paused ? 0 : prev.phaseStartsAt,
                 }
               : prev,
           ),

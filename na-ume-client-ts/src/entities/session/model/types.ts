@@ -32,6 +32,7 @@ export interface SessionState {
   settings: SessionSettings;
   availableQuestions: Question[];
   categories: string[];
+  phaseStartsAt: number;
   phaseEndsAt: number;
   phasePaused: boolean;
   isActive: boolean;

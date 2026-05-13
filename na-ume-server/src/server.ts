@@ -5,9 +5,22 @@ import { createPgPool } from './database/createPool';
 import { NoopHistoryRepository } from './repositories/HistoryRepository';
 import { InMemorySessionRepository } from './repositories/InMemorySessionRepository';
 import { PostgresQuestionRepository } from './repositories/PostgresQuestionRepository';
+import { RedisSessionRepository } from './repositories/RedisSessionRepository';
 import { GameService } from './services/GameService';
 import { createSocketServer } from './socket/createSocketServer';
 import { registerGameHandlers } from './socket/registerGameHandlers';
+import type { GameEvent } from './domain/types';
+
+const getEventRoom = (sessionId: string, event: GameEvent) => {
+  switch (event.type) {
+    case 'player_joined':
+    case 'player_left':
+    case 'answer_submitted':
+      return `${sessionId}:staff`;
+    default:
+      return sessionId;
+  }
+};
 
 const bootstrap = async () => {
   const app = createApp();
@@ -19,7 +32,12 @@ const bootstrap = async () => {
   await questionRepository.init();
   const questions = await questionRepository.getAll();
 
-  const sessionRepository = new InMemorySessionRepository();
+  const sessionRepository = env.redisUrl
+    ? new RedisSessionRepository(env.redisUrl)
+    : new InMemorySessionRepository();
+  if (sessionRepository instanceof RedisSessionRepository) {
+    await sessionRepository.hydrate();
+  }
   const historyRepository = new NoopHistoryRepository();
 
   const gameService = new GameService(sessionRepository, historyRepository, questions, {
@@ -28,6 +46,9 @@ const bootstrap = async () => {
     },
     onTopAnswers: (sessionId, topAnswers) => {
       io.to(sessionId).emit('game:top-answers', topAnswers);
+    },
+    onGameEvent: (sessionId, event) => {
+      io.to(getEventRoom(sessionId, event)).emit('game:event', event);
     },
   });
 

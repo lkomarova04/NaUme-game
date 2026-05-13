@@ -12,7 +12,7 @@ import '../../app/styles/reset.css';
 const PlayerPage = () => {
   const { sessionId = '' } = useParams();
   const { session, player, joinSession, submitAnswer, submitGuess, __setPhase, connectionError } = useGame();
-  const [playerName, setPlayerName] = useState('Игрок');
+  const [playerName, setPlayerName] = useState('');
   const [answerText, setAnswerText] = useState('');
   const [answerStatus, setAnswerStatus] = useState('');
   const [guessStatus, setGuessStatus] = useState('');
@@ -23,7 +23,12 @@ const PlayerPage = () => {
   const totalRounds = useMemo(() => session?.rounds.length ?? 1, [session]);
 
   const handleJoin = () => {
-    joinSession(sessionId, playerName.trim() || 'Игрок');
+    const normalizedName = playerName.trim();
+    if (!normalizedName) {
+      return;
+    }
+
+    joinSession(sessionId, normalizedName);
     setGuessStatus('');
   };
 
@@ -86,6 +91,13 @@ const PlayerPage = () => {
 
   return (
     <>
+      {session.phase !== 'lobby' && player ? (
+        <div className="player-score-badge">
+          <span>Счет</span>
+          {player.score}
+        </div>
+      ) : null}
+
       {session.phase === 'lobby' && (
         <PlayerMainPage
           value={playerName}
@@ -100,6 +112,9 @@ const PlayerPage = () => {
           value={answerText}
           onChange={setAnswerText}
           onStart={handleAnswerSubmit}
+          phaseStartsAt={session.phaseStartsAt}
+          phaseEndsAt={session.phaseEndsAt || undefined}
+          phasePaused={session.phasePaused}
           disabled={Boolean(player?.hasAnswered)}
           status={answerStatus}
         />
@@ -110,6 +125,7 @@ const PlayerPage = () => {
           question={currentQuestion}
           currentRound={currentRound.index + 1}
           totalRounds={totalRounds}
+          phaseStartsAt={session.phaseStartsAt}
           phaseEndsAt={session.phaseEndsAt || undefined}
           phasePaused={session.phasePaused}
           answers={currentRound.topAnswers}

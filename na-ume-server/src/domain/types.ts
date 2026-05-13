@@ -63,6 +63,7 @@ export interface SessionState {
   settings: SessionSettings;
   availableQuestions: Question[];
   categories: string[];
+  phaseStartsAt: number;
   phaseEndsAt: number;
   phasePaused: boolean;
   isActive: boolean;
@@ -139,6 +140,26 @@ export interface GuessResult {
   answerText?: string;
   pointsAwarded?: number;
 }
+
+export type GameEvent =
+  | { type: 'player_joined'; player: Player }
+  | { type: 'player_left'; playerId: string }
+  | { type: 'answer_submitted'; roundIndex: number; answer: RawAnswer; player: Player }
+  | { type: 'answer_deleted'; roundIndex: number; answerId: string; topAnswers: TopAnswer[] }
+  | { type: 'answer_revealed'; roundIndex: number; answer: TopAnswer }
+  | { type: 'guess_submitted'; roundIndex: number; player: Player; answer?: TopAnswer }
+  | {
+      type: 'phase_changed';
+      phase: GamePhase;
+      roundIndex: number;
+      phaseStartsAt: number;
+      phaseEndsAt: number;
+      phasePaused: boolean;
+      players: Player[];
+      topAnswers?: TopAnswer[];
+    }
+  | { type: 'timer_changed'; phaseStartsAt: number; phaseEndsAt: number; phasePaused: boolean }
+  | { type: 'round_changed'; roundIndex: number };
 
 export interface InternalSession extends SessionState {
   playerSockets: Map<string, Set<string>>;

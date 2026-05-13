@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
 
-const getTimeLeft = (endTime?: number, paused = false) => {
+const getTimeLeft = (endTime?: number, paused = false, startTime = 0) => {
   if (!endTime) {
     return null;
   }
@@ -9,11 +9,14 @@ const getTimeLeft = (endTime?: number, paused = false) => {
     return Math.max(0, Math.ceil(endTime / 1000));
   }
 
-  return Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+  const now = Date.now();
+  const targetTime = startTime > now ? startTime : endTime;
+
+  return Math.max(0, Math.ceil((targetTime - now) / 1000));
 };
 
-export const useTimer = (endTime?: number, paused = false) => {
-  const [timeLeft, setTimeLeft] = useState<number | null>(() => getTimeLeft(endTime, paused));
+export const useTimer = (endTime?: number, paused = false, startTime = 0) => {
+  const [timeLeft, setTimeLeft] = useState<number | null>(() => getTimeLeft(endTime, paused, startTime));
 
   useEffect(() => {
     if (!endTime) {
@@ -22,7 +25,7 @@ export const useTimer = (endTime?: number, paused = false) => {
     }
 
     const update = () => {
-      setTimeLeft(getTimeLeft(endTime, paused));
+      setTimeLeft(getTimeLeft(endTime, paused, startTime));
     };
 
     update();
@@ -33,7 +36,7 @@ export const useTimer = (endTime?: number, paused = false) => {
     const interval = setInterval(update, 250);
 
     return () => clearInterval(interval);
-  }, [endTime, paused]);
+  }, [endTime, paused, startTime]);
 
   return endTime ? timeLeft : null;
 };

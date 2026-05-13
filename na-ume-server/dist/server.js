@@ -7,9 +7,20 @@ const createPool_1 = require("./database/createPool");
 const HistoryRepository_1 = require("./repositories/HistoryRepository");
 const InMemorySessionRepository_1 = require("./repositories/InMemorySessionRepository");
 const PostgresQuestionRepository_1 = require("./repositories/PostgresQuestionRepository");
+const RedisSessionRepository_1 = require("./repositories/RedisSessionRepository");
 const GameService_1 = require("./services/GameService");
 const createSocketServer_1 = require("./socket/createSocketServer");
 const registerGameHandlers_1 = require("./socket/registerGameHandlers");
+const getEventRoom = (sessionId, event) => {
+    switch (event.type) {
+        case 'player_joined':
+        case 'player_left':
+        case 'answer_submitted':
+            return `${sessionId}:staff`;
+        default:
+            return sessionId;
+    }
+};
 const bootstrap = async () => {
     const app = (0, app_1.createApp)();
     const httpServer = (0, http_1.createServer)(app);
@@ -18,7 +29,12 @@ const bootstrap = async () => {
     const questionRepository = new PostgresQuestionRepository_1.PostgresQuestionRepository(pool);
     await questionRepository.init();
     const questions = await questionRepository.getAll();
-    const sessionRepository = new InMemorySessionRepository_1.InMemorySessionRepository();
+    const sessionRepository = env_1.env.redisUrl
+        ? new RedisSessionRepository_1.RedisSessionRepository(env_1.env.redisUrl)
+        : new InMemorySessionRepository_1.InMemorySessionRepository();
+    if (sessionRepository instanceof RedisSessionRepository_1.RedisSessionRepository) {
+        await sessionRepository.hydrate();
+    }
     const historyRepository = new HistoryRepository_1.NoopHistoryRepository();
     const gameService = new GameService_1.GameService(sessionRepository, historyRepository, questions, {
         onSessionUpdate: (session) => {
@@ -26,6 +42,9 @@ const bootstrap = async () => {
         },
         onTopAnswers: (sessionId, topAnswers) => {
             io.to(sessionId).emit('game:top-answers', topAnswers);
+        },
+        onGameEvent: (sessionId, event) => {
+            io.to(getEventRoom(sessionId, event)).emit('game:event', event);
         },
     });
     io.on('connection', (socket) => {

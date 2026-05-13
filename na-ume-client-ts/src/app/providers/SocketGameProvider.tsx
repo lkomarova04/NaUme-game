@@ -21,6 +21,25 @@ type SocketAuthPayload = {
   role: SocketRole;
   playerName?: string;
 };
+type GameEvent =
+  | { type: 'player_joined'; player: Player }
+  | { type: 'player_left'; playerId: string }
+  | { type: 'answer_submitted'; roundIndex: number; answer: RawAnswer; player: Player }
+  | { type: 'answer_deleted'; roundIndex: number; answerId: string; topAnswers: TopAnswer[] }
+  | { type: 'answer_revealed'; roundIndex: number; answer: TopAnswer }
+  | { type: 'guess_submitted'; roundIndex: number; player: Player; answer?: TopAnswer }
+  | {
+      type: 'phase_changed';
+      phase: GamePhase;
+      roundIndex: number;
+      phaseStartsAt: number;
+      phaseEndsAt: number;
+      phasePaused: boolean;
+      players: Player[];
+      topAnswers?: TopAnswer[];
+    }
+  | { type: 'timer_changed'; phaseStartsAt: number; phaseEndsAt: number; phasePaused: boolean }
+  | { type: 'round_changed'; roundIndex: number };
 
 const getRouteSessionId = (pathname: string) => {
   const match = pathname.match(/^\/(?:display|player|admin)\/([^/]+)/);
@@ -32,6 +51,20 @@ const getRouteRole = (pathname: string): SocketRole => {
   if (pathname.startsWith('/display')) return 'display';
   return 'organizer';
 };
+
+const upsertPlayer = (players: Player[], player: Player) => {
+  const exists = players.some((item) => item.id === player.id);
+  return exists ? players.map((item) => (item.id === player.id ? player : item)) : [...players, player];
+};
+
+const updateRound = (
+  session: SessionState,
+  roundIndex: number,
+  update: (round: SessionState['rounds'][number]) => SessionState['rounds'][number],
+) => ({
+  ...session,
+  rounds: session.rounds.map((round) => (round.index === roundIndex ? update(round) : round)),
+});
 
 export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
@@ -104,6 +137,117 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
 
     socket.on('player:update', (nextPlayer: Player) => {
       setPlayer(nextPlayer);
+    });
+
+    socket.on('game:top-answers', (topAnswers: TopAnswer[]) => {
+      setSession((prevSession) => {
+        if (!prevSession) return prevSession;
+        return updateRound(prevSession, prevSession.roundIndex, (round) => ({
+          ...round,
+          topAnswers,
+        }));
+      });
+    });
+
+    socket.on('game:event', (event: GameEvent) => {
+      setSession((prevSession) => {
+        if (!prevSession) return prevSession;
+
+        switch (event.type) {
+          case 'player_joined':
+            return {
+              ...prevSession,
+              players: upsertPlayer(prevSession.players, event.player),
+            };
+          case 'player_left':
+            return {
+              ...prevSession,
+              players: prevSession.players.filter((item) => item.id !== event.playerId),
+            };
+          case 'answer_submitted':
+            return updateRound(
+              {
+                ...prevSession,
+                players: upsertPlayer(prevSession.players, event.player),
+              },
+              event.roundIndex,
+              (round) => ({
+                ...round,
+                answers: round.answers.some((answer) => answer.id === event.answer.id)
+                  ? round.answers
+                  : [...round.answers, event.answer],
+              }),
+            );
+          case 'answer_deleted':
+            return updateRound(prevSession, event.roundIndex, (round) => ({
+              ...round,
+              answers: round.answers.filter((answer) => answer.id !== event.answerId),
+              topAnswers: event.topAnswers,
+            }));
+          case 'answer_revealed':
+            return updateRound(prevSession, event.roundIndex, (round) => ({
+              ...round,
+              topAnswers: round.topAnswers.map((answer) =>
+                answer.id === event.answer.id ? event.answer : answer,
+              ),
+            }));
+          case 'guess_submitted':
+            return updateRound(
+              {
+                ...prevSession,
+                players: upsertPlayer(prevSession.players, event.player),
+              },
+              event.roundIndex,
+              (round) => ({
+                ...round,
+                topAnswers: event.answer
+                  ? round.topAnswers.map((answer) =>
+                      answer.id === event.answer?.id ? event.answer : answer,
+                    )
+                  : round.topAnswers,
+              }),
+            );
+          case 'phase_changed':
+            return updateRound(
+              {
+                ...prevSession,
+                phase: event.phase,
+                roundIndex: event.roundIndex,
+                phaseStartsAt: event.phaseStartsAt,
+                phaseEndsAt: event.phaseEndsAt,
+                phasePaused: event.phasePaused,
+                players: event.players,
+              },
+              event.roundIndex,
+              (round) => ({
+                ...round,
+                topAnswers: event.topAnswers ?? round.topAnswers,
+              }),
+            );
+          case 'timer_changed':
+            return {
+              ...prevSession,
+              phaseStartsAt: event.phaseStartsAt,
+              phaseEndsAt: event.phaseEndsAt,
+              phasePaused: event.phasePaused,
+            };
+          case 'round_changed':
+            return {
+              ...prevSession,
+              roundIndex: event.roundIndex,
+            };
+          default:
+            return prevSession;
+        }
+      });
+
+      if ('player' in event) {
+        setPlayer((prevPlayer) => (prevPlayer?.id === event.player.id ? event.player : prevPlayer));
+      }
+
+      if (event.type === 'player_left') {
+        setPlayer((prevPlayer) => (prevPlayer?.id === event.playerId ? null : prevPlayer));
+      }
     });
   };
 

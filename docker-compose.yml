@@ -17,6 +17,21 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    container_name: na-ume-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - na_ume_redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   server:
     build:
       context: ./na-ume-server
@@ -25,12 +40,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       PORT: 3001
       CLIENT_ORIGIN: http://localhost
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/na_ume
+      REDIS_URL: redis://redis:6379
       BASE_POINTS: 100
-      MAX_PLAYERS_PER_SESSION: 100
+      MAX_PLAYERS_PER_SESSION: 500
       ANSWERING_DURATION_MS: 30000
       GUESSING_DURATION_MS: 200000
     ports:
@@ -57,7 +75,8 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "8081:8080"
 
 volumes:
   na_ume_postgres_data:
+  na_ume_redis_data:

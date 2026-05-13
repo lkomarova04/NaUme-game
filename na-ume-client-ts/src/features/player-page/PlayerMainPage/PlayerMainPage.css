@@ -14,6 +14,46 @@
   padding: 0 18px;
 }
 
+.main-page__timer {
+  width: fit-content;
+  min-width: 68px;
+  margin: 0 auto 18px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+  box-shadow: var(--shadow-soft);
+}
+
+.player-score-badge {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 10;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(10, 10, 14, 0.62);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(14px);
+}
+
+.player-score-badge span {
+  color: rgba(255, 255, 255, 0.68);
+  font-weight: 700;
+}
+
 .input-wrapper {
   position: relative;
 }

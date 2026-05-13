@@ -10,6 +10,14 @@ const requireOrganizer = (socket) => {
         throw new Error('Organizer privileges required');
     }
 };
+const joinRoleRooms = (socket, sessionId, role) => {
+    if (!role)
+        return;
+    socket.join(`${sessionId}:${role}`);
+    if (role === 'organizer' || role === 'display') {
+        socket.join(`${sessionId}:staff`);
+    }
+};
 const registerGameHandlers = (_io, socket, gameService) => {
     const auth = (0, auth_1.parseSocketAuth)(socket);
     socket.data.sessionId = auth.sessionId;
@@ -17,6 +25,7 @@ const registerGameHandlers = (_io, socket, gameService) => {
     socket.data.playerName = auth.playerName;
     if (auth.sessionId) {
         socket.join(auth.sessionId);
+        joinRoleRooms(socket, auth.sessionId, auth.role);
     }
     socket.on('session:join', (payload, callback) => {
         try {
@@ -29,6 +38,7 @@ const registerGameHandlers = (_io, socket, gameService) => {
             socket.data.role = role;
             socket.data.sessionId = payload.sessionId;
             socket.join(payload.sessionId);
+            joinRoleRooms(socket, payload.sessionId, role);
             const response = gameService.joinSession(payload.sessionId, role, socket.data.playerName, role === 'player' ? socket.id : undefined);
             if (response.player) {
                 socket.data.playerId = response.player.id;

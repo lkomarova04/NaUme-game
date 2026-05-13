@@ -1,0 +1,11 @@
+{
+  "name": "na-ume-workspace",
+  "private": true,
+  "scripts": {
+    "load:test": "node load-test.js",
+    "load:test:500": "node load-test.js --players=500 --ramp-ms=60000 --duration-ms=180000 --answering-sec=30 --guessing-sec=45"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.8.3"
+  }
+}

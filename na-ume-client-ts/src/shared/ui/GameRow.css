@@ -59,6 +59,11 @@
   filter: saturate(1.05);
 }
 
+.row.open .text {
+  transform-origin: center;
+  animation: answer-flip-open 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .row:not(.open) .text {
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)),
@@ -88,6 +93,20 @@
   }
   100% {
     background-position: 0 0, -20% 0;
+  }
+}
+
+@keyframes answer-flip-open {
+  0% {
+    transform: rotateX(88deg) scale(0.98);
+    filter: brightness(1.35) saturate(1.15);
+  }
+  55% {
+    transform: rotateX(-10deg) scale(1.015);
+  }
+  100% {
+    transform: rotateX(0deg) scale(1);
+    filter: brightness(1) saturate(1.05);
   }
 }
 
