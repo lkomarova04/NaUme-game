@@ -5,6 +5,7 @@ import { LeaderBoard } from '@/features/display-board/LeaderBoard/LeaderBoard';
 
 import '../../app/styles/global.css';
 import '../../app/styles/reset.css';
+import { DisplayAudio } from './DisplayAudio';
 
 const DisplayPage = () => {
   const { session, __setPhase, connectionError } = useGame();
@@ -20,6 +21,8 @@ const DisplayPage = () => {
 
   return (
     <>
+      <DisplayAudio session={session} />
+
       <div>
         {session.phase === 'lobby' && <QRScreen sessionId={session.sessionId} />}
         {session.phase === 'answering' && (
@@ -27,6 +30,7 @@ const DisplayPage = () => {
             question={currentQuestion}
             currentRound={currentRound.index + 1}
             totalRounds={totalRounds}
+            phaseStartsAt={session.phaseStartsAt}
             phaseEndsAt={session.phaseEndsAt || undefined}
             phasePaused={session.phasePaused}
           />
@@ -37,6 +41,7 @@ const DisplayPage = () => {
             question={currentQuestion}
             currentRound={currentRound.index + 1}
             totalRounds={totalRounds}
+            phaseStartsAt={session.phaseStartsAt}
             phaseEndsAt={session.phase === 'guessing' ? session.phaseEndsAt || undefined : undefined}
             phasePaused={session.phasePaused}
           />
