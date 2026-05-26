@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { useGame } from '@/app/providers/game-context';
@@ -11,8 +11,9 @@ import '../../app/styles/reset.css';
 
 const PlayerPage = () => {
   const { sessionId = '' } = useParams();
-  const { session, player, joinSession, submitAnswer, submitGuess, __setPhase, connectionError } = useGame();
+  const { session, player, joinSession, submitAnswer, submitGuess, connectionError } = useGame();
   const [playerName, setPlayerName] = useState('');
+  const [sessionCode, setSessionCode] = useState(sessionId);
   const [answerText, setAnswerText] = useState('');
   const [answerStatus, setAnswerStatus] = useState('');
   const [guessStatus, setGuessStatus] = useState('');
@@ -22,13 +23,22 @@ const PlayerPage = () => {
   const leaderboardPlayers = session ? getPlayersSorted(session) : [];
   const totalRounds = useMemo(() => session?.rounds.length ?? 1, [session]);
 
+  useEffect(() => {
+    setSessionCode(sessionId);
+  }, [sessionId]);
+
   const handleJoin = () => {
     const normalizedName = playerName.trim();
     if (!normalizedName) {
       return;
     }
 
-    joinSession(sessionId, normalizedName);
+    const normalizedSessionId = (sessionId || sessionCode).trim();
+    if (!normalizedSessionId) {
+      return;
+    }
+
+    joinSession(normalizedSessionId, normalizedName);
     setGuessStatus('');
   };
 
@@ -81,10 +91,13 @@ const PlayerPage = () => {
         <PlayerMainPage
           value={playerName}
           onChange={setPlayerName}
+          sessionCode={sessionCode}
+          onSessionCodeChange={setSessionCode}
+          showSessionCode={!sessionId}
           onStart={handleJoin}
           joined={Boolean(player)}
+          status={connectionError}
         />
-        {connectionError && <div>{connectionError}</div>}
       </>
     );
   }
@@ -102,8 +115,12 @@ const PlayerPage = () => {
         <PlayerMainPage
           value={playerName}
           onChange={setPlayerName}
+          sessionCode={sessionCode}
+          onSessionCodeChange={setSessionCode}
+          showSessionCode={!sessionId}
           onStart={handleJoin}
           joined={Boolean(player)}
+          status={connectionError}
         />
       )}
 
@@ -134,16 +151,23 @@ const PlayerPage = () => {
         />
       )}
 
+      {session.phase === 'reveal' && (
+        <RoundTwo
+          question={currentQuestion}
+          currentRound={currentRound.index + 1}
+          totalRounds={totalRounds}
+          phaseStartsAt={session.phaseStartsAt}
+          phaseEndsAt={session.phaseEndsAt || undefined}
+          phasePaused={session.phasePaused}
+          answers={currentRound.topAnswers}
+          onSubmit={() => {}}
+          status="Топ ответов открыт."
+          readOnly
+        />
+      )}
+
       {session.phase === 'leaderboard' && <LeaderBoard players={leaderboardPlayers} />}
 
-      {import.meta.env.DEV && (
-        <div className="dev-panel">
-          <button onClick={() => __setPhase('lobby')}>Lobby</button>
-          <button onClick={() => __setPhase('answering')}>Answer</button>
-          <button onClick={() => __setPhase('guessing')}>Guess</button>
-          <button onClick={() => __setPhase('leaderboard')}>Leaderboard</button>
-        </div>
-      )}
     </>
   );
 };

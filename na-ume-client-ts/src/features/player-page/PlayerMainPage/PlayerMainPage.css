@@ -58,6 +58,10 @@
   position: relative;
 }
 
+.main-page__session-input {
+  margin-bottom: 14px;
+}
+
 .input-icon {
   position: absolute;
   left: 16px;
@@ -82,6 +86,13 @@
 .main-page__input::placeholder {
   color: rgba(255, 255, 255, 0.5);
   font-weight: 400;
+}
+
+.main-page__input--center {
+  padding-left: 17px;
+  text-align: center;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .main-page__btn {
