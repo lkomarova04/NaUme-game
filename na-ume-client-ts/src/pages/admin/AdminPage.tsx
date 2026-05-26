@@ -15,6 +15,9 @@ const AdminPage = () => {
   const {
     session,
     createSession,
+    adminAccessCode,
+    setAdminAccessCode,
+    connectionError,
     __setPhase,
     startGame,
     nextPhase,
@@ -27,8 +30,10 @@ const AdminPage = () => {
     goToRound,
   } = useGame();
   const [eventName, setEventName] = useState('На уме');
+  const [adminCodeDraft, setAdminCodeDraft] = useState(adminAccessCode);
 
-  const [currentTimerDraft, setCurrentTimerDraft] = useState('0');
+  const [manualTimerDraft, setManualTimerDraft] = useState('60');
+  const [manualDelayDraft, setManualDelayDraft] = useState('0');
   const currentRound = session ? getCurrentRound(session) : undefined;
 
   const playersMap = useMemo(() => {
@@ -43,26 +48,83 @@ const AdminPage = () => {
         : 0;
 
   useEffect(() => {
-    setCurrentTimerDraft(String(currentTimerSec));
-  }, [currentTimerSec]);
+    setAdminCodeDraft(adminAccessCode);
+  }, [adminAccessCode]);
 
-  const commitCurrentTimer = () => {
-    const nextValue = Number(currentTimerDraft);
-    if (Number.isFinite(nextValue)) {
-      setCurrentTimer(nextValue);
+  const applyManualTimer = () => {
+    const durationSec = Number(manualTimerDraft);
+    const delaySec = Number(manualDelayDraft);
+
+    if (Number.isFinite(durationSec) && Number.isFinite(delaySec)) {
+      setCurrentTimer(durationSec, delaySec);
     }
   };
 
+  const applyAdminCode = () => {
+    setAdminAccessCode(adminCodeDraft);
+  };
+
+  const adminAccessError =
+    connectionError === 'Неверный код админки.' || connectionError === 'Organizer privileges required';
+  const hasAdminAccess = adminAccessCode.length > 0 && !adminAccessError;
+
+  if (!hasAdminAccess) {
+    return (
+      <div className="admin-page admin-page--center">
+        <section className="admin-card admin-auth-card">
+          <p className="admin-kicker">Доступ организатора</p>
+          <h1>Админ-панель</h1>
+          <p className="admin-muted">
+            Введите код доступа, чтобы управлять сессиями и настройками игры.
+          </p>
+
+          <label className="admin-field">
+            <span>Код админки</span>
+            <input
+              type="password"
+              value={adminCodeDraft}
+              onChange={(event) => setAdminCodeDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  applyAdminCode();
+                }
+              }}
+            />
+          </label>
+
+          {adminAccessCode && connectionError && <p className="admin-error">{connectionError}</p>}
+
+          <button className="admin-primary-button" onClick={applyAdminCode}>
+            Войти
+          </button>
+        </section>
+      </div>
+    );
+  }
+
   if (!sessionId && !session) {
     return (
-      <div className="admin-page">
-        <section className="admin-card">
-          <h1>ADMIN PANEL</h1>
+      <div className="admin-page admin-page--center">
+        <section className="admin-card admin-create-card">
+          <p className="admin-kicker">Новая игра</p>
+          <h1>Создание сессии</h1>
+          <p className="admin-muted">
+            Задайте название события, затем откройте экран дисплея и приглашайте игроков.
+          </p>
+
           <label className="admin-field">
             <span>Название события</span>
             <input value={eventName} onChange={(event) => setEventName(event.target.value)} />
           </label>
-          <button onClick={() => void createSession(eventName.trim() || 'На уме')}>Создать сессию</button>
+
+          {connectionError && <p className="admin-error">{connectionError}</p>}
+
+          <button
+            className="admin-primary-button"
+            onClick={() => void createSession(eventName.trim() || 'На уме')}
+          >
+            Создать сессию
+          </button>
         </section>
       </div>
     );
@@ -73,11 +135,41 @@ const AdminPage = () => {
   }
 
   const { settings } = session;
+  const answeredPlayersCount = new Set(currentRound.answers.map((answer) => answer.playerId)).size;
+  const guessedPlayersCount = session.players.filter((player) => player.hasGuessed).length;
+  const revealedAnswersCount = currentRound.topAnswers.filter((answer) => answer.revealed).length;
 
   return (
     <div className="admin-page">
-      <section className="admin-card">
-        <h1>ADMIN PANEL</h1>
+      <section className="admin-hero">
+        <div>
+          <p className="admin-kicker">Панель организатора</p>
+          <h1>{session.eventName}</h1>
+          <p className="admin-muted">Сессия {session.sessionId} · Раунд {session.roundIndex + 1} из {session.rounds.length}</p>
+        </div>
+        <div className="admin-hero-actions">
+          <button className="admin-primary-button" onClick={() => startGame()}>Запустить</button>
+          <button onClick={() => nextPhase()}>Следующая фаза</button>
+        </div>
+      </section>
+
+      <section className="admin-stats">
+        <div className="admin-stat">
+          <span>Подключено</span>
+          <strong>{session.players.length}</strong>
+        </div>
+        <div className="admin-stat">
+          <span>Ответили в 1 фазе</span>
+          <strong>{answeredPlayersCount}</strong>
+        </div>
+        <div className="admin-stat">
+          <span>Ответили во 2 фазе</span>
+          <strong>{guessedPlayersCount}</strong>
+        </div>
+        <div className="admin-stat">
+          <span>Открыто ответов</span>
+          <strong>{revealedAnswersCount}</strong>
+        </div>
       </section>
 
       <section className="admin-grid">
@@ -223,7 +315,7 @@ const AdminPage = () => {
             </label>
 
             <label className="admin-field">
-              <span>Задержка старта, сек.</span>
+              <span>Встроенная задержка фаз, сек.</span>
               <input
                 type="number"
                 min={0}
@@ -241,10 +333,8 @@ const AdminPage = () => {
         </div>
 
         <div className="admin-card">
-          <h2>Фаза игры</h2>
+          <h2>Управление игрой</h2>
           <div className="admin-actions">
-            <button onClick={() => startGame()}>Запустить</button>
-            <button onClick={() => nextPhase()}>Следующая фаза</button>
             <button onClick={() => __setPhase('lobby')}>Lobby</button>
             <button onClick={() => __setPhase('answering')}>Сбор ответов</button>
             <button onClick={() => __setPhase('guessing')}>Угадывание и топ</button>
@@ -255,23 +345,36 @@ const AdminPage = () => {
             <button onClick={() => resetGame()}>Сброс игры</button>
           </div>
 
-          <label className="admin-field">
-            <span>Текущее время таймера, сек.</span>
-            <input
-              type="number"
-              min={0}
-              max={3600}
-              value={currentTimerDraft}
-              onChange={(event) => setCurrentTimerDraft(event.target.value)}
-              onBlur={commitCurrentTimer}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  commitCurrentTimer();
-                  event.currentTarget.blur();
-                }
-              }}
-            />
-          </label>
+          <div className="admin-timer-panel">
+            <div>
+              <span>Таймер сейчас</span>
+              <strong>{currentTimerSec} сек.</strong>
+            </div>
+          </div>
+
+          <div className="admin-manual-timer">
+            <label className="admin-field">
+              <span>Ручной таймер, сек.</span>
+              <input
+                type="number"
+                min={5}
+                max={3600}
+                value={manualTimerDraft}
+                onChange={(event) => setManualTimerDraft(event.target.value)}
+              />
+            </label>
+            <label className="admin-field">
+              <span>Задержка перед стартом, сек.</span>
+              <input
+                type="number"
+                min={0}
+                max={600}
+                value={manualDelayDraft}
+                onChange={(event) => setManualDelayDraft(event.target.value)}
+              />
+            </label>
+            <button onClick={applyManualTimer}>Запустить ручной таймер</button>
+          </div>
 
           <div className="admin-status">
             <strong>Текущий вопрос:</strong> {currentRound.question.text}
