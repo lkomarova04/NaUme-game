@@ -17,6 +17,7 @@ type RoundTwoProps = {
   answers: TopAnswer[];
   status?: string;
   onSubmit: (guess: string) => void;
+  readOnly?: boolean;
 };
 
 const RoundTwo = ({
@@ -29,6 +30,7 @@ const RoundTwo = ({
   answers,
   status,
   onSubmit,
+  readOnly = false,
 }: RoundTwoProps) => {
   const timeLeft = useTimer(phaseEndsAt, phasePaused, phaseStartsAt);
   const [guessValue, setGuessValue] = useState('');
@@ -64,21 +66,23 @@ const RoundTwo = ({
           ))}
         </div>
 
-        <form className="player-guess-form" onSubmit={handleSubmit}>
-          <label className="player-input-shell">
-            <span className="player-input-label">Ваш вариант</span>
-            <input
-              className="player-guess-input"
-              value={guessValue}
-              onChange={(event) => setGuessValue(event.target.value)}
-              placeholder="Введите ответ как в Сто к одному"
-            />
-          </label>
+        {!readOnly && (
+          <form className="player-guess-form" onSubmit={handleSubmit}>
+            <label className="player-input-shell">
+              <span className="player-input-label">Ваш вариант</span>
+              <input
+                className="player-guess-input"
+                value={guessValue}
+                onChange={(event) => setGuessValue(event.target.value)}
+                placeholder="Введите ответ как в Сто к одному"
+              />
+            </label>
 
-          <button className="main-page__btn player-guess-submit" type="submit">
-            Отправить вариант
-          </button>
-        </form>
+            <button className="main-page__btn player-guess-submit" type="submit">
+              Отправить вариант
+            </button>
+          </form>
+        )}
 
         {status ? <p className="player-guess-status">{status}</p> : null}
       </div>

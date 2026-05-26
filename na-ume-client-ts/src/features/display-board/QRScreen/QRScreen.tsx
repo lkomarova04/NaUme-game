@@ -10,9 +10,16 @@ const QRScreen = ({ sessionId }: QRScreenProps) => {
   const joinURL = useMemo(() => {
     return `${window.location.origin}/player/${sessionId}`;
   }, [sessionId]);
+  const joinBaseURL = useMemo(() => {
+    return `${window.location.origin}/player`;
+  }, []);
 
   return (
     <div className="qr">
+      <div className="qr-origin">
+        <span>Адрес подключения</span>
+        <strong>{joinBaseURL}</strong>
+      </div>
       <div className="qr-code-card">
         <QRCodeSVG
           value={joinURL}
@@ -25,7 +32,7 @@ const QRScreen = ({ sessionId }: QRScreenProps) => {
         />
       </div>
       <div className="qr-link">
-        <h1>{joinURL}</h1>
+        <h1>{sessionId}</h1>
       </div>
     </div>
   );

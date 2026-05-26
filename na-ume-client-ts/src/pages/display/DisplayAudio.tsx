@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import type { SessionState } from '@/entities/session';
 import { getCurrentRound } from '@/entities/session';
 import { useTimer } from '@/shared/lib';
-
-import './DisplayAudio.css';
 
 const BACKGROUND_MUSIC_SRC = '/audio/background.mp3';
 const TIMER_WARNING_SRC = '/audio/timer-warning.mp3';
@@ -32,7 +30,6 @@ export const DisplayAudio = ({ session }: DisplayAudioProps) => {
   const warningPlayedKeyRef = useRef('');
   const revealedAnswerIdsRef = useRef<Set<string>>(new Set());
   const hasMountedRef = useRef(false);
-  const [needsUnlock, setNeedsUnlock] = useState(false);
 
   const currentRound = getCurrentRound(session);
   const timeLeft = useTimer(session.phaseEndsAt || undefined, session.phasePaused, session.phaseStartsAt);
@@ -57,11 +54,18 @@ export const DisplayAudio = ({ session }: DisplayAudioProps) => {
     warningAudioRef.current = warningAudio;
     revealAudioRef.current = revealAudio;
 
-    void playAudio(backgroundAudio).then((played) => {
-      setNeedsUnlock(!played);
-    });
+    void playAudio(backgroundAudio);
+
+    const unlockAudio = () => {
+      void playAudio(backgroundAudio);
+    };
+
+    window.addEventListener('pointerdown', unlockAudio, { once: true });
+    window.addEventListener('keydown', unlockAudio, { once: true });
 
     return () => {
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
       backgroundAudio.pause();
       warningAudio.pause();
       revealAudio.pause();
@@ -100,14 +104,5 @@ export const DisplayAudio = ({ session }: DisplayAudioProps) => {
     revealedAnswerIdsRef.current = currentIds;
   }, [revealedAnswerIds, session.phase]);
 
-  const unlockAudio = async () => {
-    const played = await playAudio(backgroundAudioRef.current);
-    setNeedsUnlock(!played);
-  };
-
-  return needsUnlock ? (
-    <button className="display-audio-unlock" onClick={unlockAudio}>
-      Включить звук
-    </button>
-  ) : null;
+  return null;
 };

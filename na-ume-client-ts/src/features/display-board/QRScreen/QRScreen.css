@@ -19,8 +19,43 @@
   animation-delay: 120ms;
 }
 
-.qr > *:last-child {
+.qr > *:nth-child(2) {
   animation-delay: 260ms;
+}
+
+.qr > *:last-child {
+  animation-delay: 360ms;
+}
+
+.qr-origin {
+  position: fixed;
+  top: 32px;
+  left: 32px;
+  z-index: 2;
+  max-width: min(720px, calc(100vw - 64px));
+  padding: 16px 18px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: rgba(10, 10, 14, 0.58);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(14px);
+}
+
+.qr-origin span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.qr-origin strong {
+  display: block;
+  margin-top: 6px;
+  font-size: clamp(18px, 1.4vw, 30px);
+  line-height: 1.15;
+  word-break: break-word;
 }
 
 .qr-img {
@@ -52,7 +87,7 @@
 }
 
 .qr-link::before {
-  content: 'Ссылка для подключения';
+  content: 'Номер сессии';
   color: var(--text-muted);
   font-size: 18px;
   font-weight: 600;
@@ -62,9 +97,10 @@
 
 .qr-link h1 {
   margin: 0;
-  font-size: clamp(28px, 2.6vw, 52px);
+  font-size: clamp(72px, 9vw, 180px);
   line-height: 1.05;
   word-break: break-word;
+  text-align: center;
 }
 
 @keyframes screen-fade-up {
@@ -110,7 +146,7 @@
   }
 
   .qr-link h1 {
-    font-size: clamp(56px, 4vw, 92px);
+    font-size: clamp(120px, 10vw, 240px);
   }
 }
 
@@ -130,6 +166,17 @@
   }
 
   .qr-link h1 {
-    font-size: clamp(72px, 6vw, 140px);
+    font-size: clamp(160px, 11vw, 320px);
+  }
+}
+
+@media (max-width: 720px) {
+  .qr-origin {
+    position: static;
+    max-width: 100%;
+  }
+
+  .qr-link h1 {
+    font-size: clamp(52px, 18vw, 92px);
   }
 }

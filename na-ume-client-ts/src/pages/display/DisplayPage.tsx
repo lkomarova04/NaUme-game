@@ -8,7 +8,7 @@ import '../../app/styles/reset.css';
 import { DisplayAudio } from './DisplayAudio';
 
 const DisplayPage = () => {
-  const { session, __setPhase, connectionError } = useGame();
+  const { session, connectionError } = useGame();
 
   const currentRound = session ? getCurrentRound(session) : undefined;
   const currentQuestion = session ? getCurrentQuestion(session) : undefined;
@@ -49,15 +49,6 @@ const DisplayPage = () => {
         {session.phase === 'leaderboard' && <LeaderBoard players={leaderboardPlayers} />}
       </div>
 
-      {import.meta.env.DEV && (
-        <div className="dev-panel">
-          <button onClick={() => __setPhase('lobby')}>QR</button>
-          <button onClick={() => __setPhase('answering')}>Question</button>
-          <button onClick={() => __setPhase('guessing')}>Guess</button>
-          <button onClick={() => __setPhase('reveal')}>Reveal</button>
-          <button onClick={() => __setPhase('leaderboard')}>Leaderboard</button>
-        </div>
-      )}
     </>
   );
 };
