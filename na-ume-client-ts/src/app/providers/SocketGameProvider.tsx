@@ -20,6 +20,8 @@ type SocketAuthPayload = {
   sessionId?: string;
   role: SocketRole;
   playerName?: string;
+  adminCode?: string;
+  organizerToken?: string;
 };
 type GameEvent =
   | { type: 'player_joined'; player: Player }
@@ -40,6 +42,11 @@ type GameEvent =
     }
   | { type: 'timer_changed'; phaseStartsAt: number; phaseEndsAt: number; phasePaused: boolean }
   | { type: 'round_changed'; roundIndex: number };
+
+const getStoredOrganizerToken = (sessionId: string | undefined) => {
+  if (!sessionId) return undefined;
+  return window.localStorage.getItem(`na-ume-organizer-token:${sessionId}`) ?? undefined;
+};
 
 const getRouteSessionId = (pathname: string) => {
   const match = pathname.match(/^\/(?:display|player|admin)\/([^/]+)/);
@@ -76,6 +83,9 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
   const [player, setPlayer] = useState<Player | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [adminAccessCode, setAdminAccessCodeState] = useState(() => {
+    return window.localStorage.getItem('na-ume-admin-code') ?? '';
+  });
   const socketRef = useRef<Socket | null>(null);
   const authRef = useRef<SocketAuthPayload>({ role: routeRole, sessionId: routeSessionId });
   const pendingJoinRef = useRef<{ sessionId: string; playerName: string } | null>(null);
@@ -256,6 +266,8 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
       role: routeRole,
       sessionId: routeSessionId,
       playerName: pendingJoinRef.current?.playerName,
+      adminCode: routeRole === 'organizer' ? adminAccessCode : undefined,
+      organizerToken: routeRole === 'organizer' ? getStoredOrganizerToken(routeSessionId) : undefined,
     };
 
     if (routeRole === 'player' && !pendingJoinRef.current) {
@@ -275,7 +287,7 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
       socketRef.current?.disconnect();
       socketRef.current = null;
     };
-  }, [routeRole, routeSessionId]);
+  }, [adminAccessCode, routeRole, routeSessionId]);
 
   const contextValue = useMemo<GameContextValue>(() => {
     return {
@@ -283,6 +295,13 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
       player,
       isConnected,
       connectionError,
+      adminAccessCode,
+      setAdminAccessCode: (code: string) => {
+        const normalizedCode = code.trim();
+        setAdminAccessCodeState(normalizedCode);
+        window.localStorage.setItem('na-ume-admin-code', normalizedCode);
+        setConnectionError(null);
+      },
       createSession: async (eventName: string) => {
         if (!socketRef.current) return null;
 
@@ -290,10 +309,17 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
           socketRef.current?.emit(
             'organizer:create-session',
             { eventName },
-            (response: { sessionId: string }) => {
+            (response: { sessionId?: string; organizerToken?: string }) => {
               if (!response?.sessionId) {
                 resolve(null);
                 return;
+              }
+
+              if (response.organizerToken) {
+                window.localStorage.setItem(
+                  `na-ume-organizer-token:${response.sessionId}`,
+                  response.organizerToken,
+                );
               }
 
               navigate(`/admin/${response.sessionId}`);
@@ -340,11 +366,12 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
           paused,
         });
       },
-      setCurrentTimer: (durationSec: number) => {
+      setCurrentTimer: (durationSec: number, delaySec = 0) => {
         if (!session) return;
         socketRef.current?.emit('organizer:set-timer', {
           sessionId: session.sessionId,
           durationSec,
+          delaySec,
         });
       },
       submitAnswer: async (answer: string) => {
@@ -415,7 +442,7 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
       __setTopAnswers: (_answers: TopAnswer[]) => {},
       __setRawAnswers: (_answers: RawAnswer[]) => {},
     };
-  }, [connectionError, isConnected, navigate, player, session]);
+  }, [adminAccessCode, connectionError, isConnected, navigate, player, session]);
 
   return <GameContext.Provider value={contextValue}>{children}</GameContext.Provider>;
 };

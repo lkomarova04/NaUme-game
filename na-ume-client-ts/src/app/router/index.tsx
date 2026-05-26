@@ -22,6 +22,10 @@ export const router = createBrowserRouter([
         element: <PlayerPage />,
       },
       {
+        path: '/player',
+        element: <PlayerPage />,
+      },
+      {
         path: '/admin',
         element: <AdminPage />,
       },

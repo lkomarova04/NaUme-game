@@ -47,6 +47,7 @@ const bootstrap = async () => {
             io.to(getEventRoom(sessionId, event)).emit('game:event', event);
         },
     });
+    gameService.resumeTimers();
     io.on('connection', (socket) => {
         (0, registerGameHandlers_1.registerGameHandlers)(io, socket, gameService);
     });

@@ -6,6 +6,7 @@ import type {
   GameErrorPayload,
   JoinSessionPayload,
   JoinSessionResponse,
+  CreateSessionResponse,
   PauseTimerPayload,
   RevealAnswerPayload,
   ResetGamePayload,
@@ -18,6 +19,7 @@ import type {
 } from '../domain/types';
 import { parseSocketAuth } from './auth';
 import type { GameService } from '../services/GameService';
+import { env } from '../config/env';
 
 const emitError = (socket: Socket, payload: GameErrorPayload) => {
   socket.emit('error', payload);
@@ -27,6 +29,18 @@ const requireOrganizer = (socket: Socket) => {
   if (socket.data.role !== 'organizer') {
     throw new Error('Organizer privileges required');
   }
+};
+
+const requireOrganizerForSession = (socket: Socket, gameService: GameService, sessionId: string) => {
+  requireOrganizer(socket);
+
+  if (!socket.data.adminAuthorized && !gameService.isOrganizerTokenValid(sessionId, socket.data.organizerToken)) {
+    throw new Error('Organizer privileges required');
+  }
+};
+
+const isOrganizerAuthorized = (role: string | undefined, adminCode: string | undefined) => {
+  return role === 'organizer' && adminCode === env.adminAccessCode;
 };
 
 const joinRoleRooms = (socket: Socket, sessionId: string, role: string | undefined) => {
@@ -44,8 +58,15 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
   socket.data.sessionId = auth.sessionId;
   socket.data.role = auth.role;
   socket.data.playerName = auth.playerName;
+  socket.data.adminAuthorized = isOrganizerAuthorized(auth.role, auth.adminCode);
+  socket.data.organizerToken = auth.organizerToken;
 
-  if (auth.sessionId) {
+  if (
+    auth.sessionId &&
+    (auth.role !== 'organizer' ||
+      socket.data.adminAuthorized ||
+      gameService.isOrganizerTokenValid(auth.sessionId, socket.data.organizerToken))
+  ) {
     socket.join(auth.sessionId);
     joinRoleRooms(socket, auth.sessionId, auth.role);
   }
@@ -61,6 +82,17 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
 
       socket.data.role = role;
       socket.data.sessionId = payload.sessionId;
+
+      if (
+        role === 'organizer' &&
+        !socket.data.adminAuthorized &&
+        !gameService.isOrganizerTokenValid(payload.sessionId, socket.data.organizerToken)
+      ) {
+        callback?.({ success: false });
+        emitError(socket, { code: 'INVALID_ADMIN_ACCESS_CODE', message: 'Неверный код админки.' });
+        return;
+      }
+
       socket.join(payload.sessionId);
       joinRoleRooms(socket, payload.sessionId, role);
 
@@ -90,21 +122,22 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
     }
   });
 
-  socket.on('organizer:create-session', (payload: CreateSessionPayload, callback: (response: { sessionId: string }) => void) => {
+  socket.on('organizer:create-session', (payload: CreateSessionPayload, callback?: (response: CreateSessionResponse) => void) => {
     try {
-      requireOrganizer(socket);
+      if (!socket.data.adminAuthorized) {
+        throw new Error('Organizer privileges required');
+      }
+
       const session = gameService.createSession(payload.eventName);
+      const organizerToken = gameService.getOrganizerToken(session.sessionId);
       socket.data.sessionId = session.sessionId;
+      socket.data.role = 'organizer';
+      socket.data.organizerToken = organizerToken;
       socket.join(session.sessionId);
-      callback({ sessionId: session.sessionId });
+      callback?.({ sessionId: session.sessionId, organizerToken });
       socket.emit('session:update', session);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Не удалось отправить догадку.';
-      const clientMessage =
-        error instanceof Error && error.message === 'Guess contains inappropriate language'
-          ? 'Ответ не отправлен из-за недопустимой брани.'
-          : message;
-
+      callback?.({});
       emitError(socket, {
         code: 'CREATE_SESSION_FAILED',
         message: error instanceof Error ? error.message : 'Не удалось создать сессию.',
@@ -114,7 +147,7 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
 
   socket.on('organizer:start-game', (payload: SessionPhasePayload) => {
     try {
-      requireOrganizer(socket);
+      requireOrganizerForSession(socket, gameService, payload.sessionId);
       gameService.startGame(payload.sessionId);
     } catch (error) {
       emitError(socket, {
@@ -126,7 +159,7 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
 
   socket.on('organizer:next-phase', (payload: SessionPhasePayload) => {
     try {
-      requireOrganizer(socket);
+      requireOrganizerForSession(socket, gameService, payload.sessionId);
       gameService.nextPhase(payload.sessionId);
     } catch (error) {
       emitError(socket, {
@@ -138,7 +171,7 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
 
   socket.on('organizer:reveal-answer', (payload: RevealAnswerPayload) => {
     try {
-      requireOrganizer(socket);
+      requireOrganizerForSession(socket, gameService, payload.sessionId);
       gameService.revealAnswer(payload.sessionId, payload.answerIndex);
     } catch (error) {
       emitError(socket, {
@@ -150,7 +183,7 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
 
   socket.on('organizer:pause-timer', (payload: PauseTimerPayload) => {
     try {
-      requireOrganizer(socket);
+      requireOrganizerForSession(socket, gameService, payload.sessionId);
       gameService.setTimerPaused(payload.sessionId, payload.paused);
     } catch (error) {
       emitError(socket, {
@@ -162,8 +195,8 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
 
   socket.on('organizer:set-timer', (payload: SetTimerPayload) => {
     try {
-      requireOrganizer(socket);
-      gameService.setCurrentTimer(payload.sessionId, payload.durationSec);
+      requireOrganizerForSession(socket, gameService, payload.sessionId);
+      gameService.setCurrentTimer(payload.sessionId, payload.durationSec, payload.delaySec);
     } catch (error) {
       emitError(socket, {
         code: 'SET_TIMER_FAILED',
@@ -174,7 +207,7 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
 
   socket.on('session:phase:set', (payload: ForcePhasePayload) => {
     try {
-      requireOrganizer(socket);
+      requireOrganizerForSession(socket, gameService, payload.sessionId);
       gameService.forcePhase(payload.sessionId, payload.phase);
     } catch (error) {
       emitError(socket, {
@@ -186,7 +219,7 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
 
   socket.on('session:settings:update', (payload: UpdateSettingsPayload) => {
     try {
-      requireOrganizer(socket);
+      requireOrganizerForSession(socket, gameService, payload.sessionId);
       gameService.updateSettings(payload.sessionId, payload.settings);
     } catch (error) {
       emitError(socket, {
@@ -198,7 +231,7 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
 
   socket.on('session:round:set', (payload: SetRoundPayload) => {
     try {
-      requireOrganizer(socket);
+      requireOrganizerForSession(socket, gameService, payload.sessionId);
       gameService.setRound(payload.sessionId, payload.roundIndex);
     } catch (error) {
       emitError(socket, {
@@ -210,7 +243,7 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
 
   socket.on('answer:delete', (payload: DeleteAnswerPayload) => {
     try {
-      requireOrganizer(socket);
+      requireOrganizerForSession(socket, gameService, payload.sessionId);
       gameService.deleteAnswer(payload.sessionId, payload.answerId);
     } catch (error) {
       emitError(socket, {
@@ -222,7 +255,7 @@ export const registerGameHandlers = (_io: Server, socket: Socket, gameService: G
 
   socket.on('organizer:reset-game', (payload: ResetGamePayload) => {
     try {
-      requireOrganizer(socket);
+      requireOrganizerForSession(socket, gameService, payload.sessionId);
       gameService.resetGame(payload.sessionId, payload.keepPlayers ?? true);
     } catch (error) {
       emitError(socket, {

@@ -73,6 +73,46 @@ describe('GameService', () => {
     expect(rareGuess.player.score).toBeGreaterThan(popularGuess.player.score);
   });
 
+  it('allows another guess after an incorrect guess', () => {
+    const { service } = createGameService();
+    const session = service.createSession('Retry Guess Event');
+    const alice = service.joinSession(session.sessionId, 'player', 'Алиса', 'socket-alice').player!;
+    const boris = service.joinSession(session.sessionId, 'player', 'Борис', 'socket-boris').player!;
+
+    service.startGame(session.sessionId);
+    service.submitAnswer(session.sessionId, alice.id, 'coffee');
+    service.submitAnswer(session.sessionId, boris.id, 'tea');
+    service.nextPhase(session.sessionId);
+
+    const missedGuess = service.submitGuess(session.sessionId, alice.id, 'milk');
+    expect(missedGuess.result.matched).toBe(false);
+    expect(missedGuess.player.hasGuessed).toBe(false);
+
+    const matchedGuess = service.submitGuess(session.sessionId, alice.id, 'coffee');
+    expect(matchedGuess.result.matched).toBe(true);
+    expect(matchedGuess.player.hasGuessed).toBe(true);
+  });
+
+  it('reveals the top answers before moving to the next round', () => {
+    const { service } = createGameService();
+    const session = service.createSession('Reveal Top Event');
+    const alice = service.joinSession(session.sessionId, 'player', 'Алиса', 'socket-alice').player!;
+    const boris = service.joinSession(session.sessionId, 'player', 'Борис', 'socket-boris').player!;
+
+    service.startGame(session.sessionId);
+    service.submitAnswer(session.sessionId, alice.id, 'coffee');
+    service.submitAnswer(session.sessionId, boris.id, 'tea');
+    service.nextPhase(session.sessionId);
+
+    const revealed = service.nextPhase(session.sessionId);
+    expect(revealed.phase).toBe('reveal');
+    expect(revealed.rounds[0]?.topAnswers.every((answer) => answer.revealed)).toBe(true);
+
+    const nextRound = service.nextPhase(session.sessionId);
+    expect(nextRound.phase).toBe('answering');
+    expect(nextRound.roundIndex).toBe(1);
+  });
+
   it('disconnect removes player from session roster', () => {
     const { service } = createGameService();
     const session = service.createSession('Disconnect Event');
@@ -82,6 +122,8 @@ describe('GameService', () => {
     expect(joinResult.session?.players).toHaveLength(1);
 
     service.disconnectPlayer(session.sessionId, joinResult.player?.id, 'socket-player');
+    expect(service.getSession(session.sessionId)?.players).toHaveLength(1);
+    jest.advanceTimersByTime(30000);
     expect(service.getSession(session.sessionId)?.players).toHaveLength(0);
   });
 
@@ -119,6 +161,9 @@ describe('GameService', () => {
     expect(state.phase).toBe('guessing');
 
     state = service.nextPhase(session.sessionId);
+    expect(state.phase).toBe('reveal');
+
+    state = service.nextPhase(session.sessionId);
     expect(state.phase).toBe('answering');
     expect(state.roundIndex).toBe(1);
 
@@ -134,11 +179,15 @@ describe('GameService', () => {
 
       if (roundIndex < state.rounds.length - 1) {
         state = service.nextPhase(session.sessionId);
+        expect(state.phase).toBe('reveal');
+
+        state = service.nextPhase(session.sessionId);
         expect(state.phase).toBe('answering');
         expect(state.roundIndex).toBe(roundIndex + 1);
       }
     }
 
+    expect(service.nextPhase(session.sessionId).phase).toBe('reveal');
     expect(service.nextPhase(session.sessionId).phase).toBe('leaderboard');
   });
 

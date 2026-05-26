@@ -2,7 +2,7 @@ import Redis from 'ioredis';
 import type { InternalSession } from '../domain/types';
 import type { SessionRepository, SessionUpdateOptions } from './SessionRepository';
 
-type SerializedSession = Omit<InternalSession, 'playerSockets' | 'timer'>;
+type SerializedSession = Omit<InternalSession, 'playerSockets' | 'disconnectTimers' | 'timer'>;
 
 export class RedisSessionRepository implements SessionRepository {
   private readonly redis: Redis;
@@ -56,13 +56,19 @@ export class RedisSessionRepository implements SessionRepository {
       this.cache.set(session.sessionId, {
         ...session,
         playerSockets: new Map<string, Set<string>>(),
+        disconnectTimers: new Map<string, NodeJS.Timeout>(),
         timer: undefined,
       });
     });
   }
 
   private async save(session: InternalSession) {
-    const { playerSockets: _playerSockets, timer: _timer, ...serializedSession } = session;
+    const {
+      playerSockets: _playerSockets,
+      disconnectTimers: _disconnectTimers,
+      timer: _timer,
+      ...serializedSession
+    } = session;
 
     await this.redis
       .multi()

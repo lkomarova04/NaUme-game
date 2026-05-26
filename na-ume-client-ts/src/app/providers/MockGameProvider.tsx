@@ -25,13 +25,19 @@ const EMPTY_TOP_ANSWER_TEXT = 'Пусто';
 
 const normalizeText = (value: string) => value.trim().toLocaleLowerCase('ru-RU');
 
-const getQuestionsByCategory = (category: string | 'all') =>
-  category === 'all'
-    ? mockQuestions
-    : mockQuestions.filter((item) => item.category === category);
-
 const getFallbackQuestion = (excludedIds: string[]) =>
   mockQuestions.find((item) => !excludedIds.includes(item.id)) ?? mockQuestions[excludedIds.length % mockQuestions.length];
+
+const shuffleQuestions = (questions: typeof mockQuestions) => {
+  const shuffled = [...questions];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+  }
+
+  return shuffled;
+};
 
 const buildRound = (questionId: string, questionIndex: number): Round => {
   const question = mockQuestions.find((item) => item.id === questionId) ?? mockQuestions[0];
@@ -51,10 +57,14 @@ const buildRound = (questionId: string, questionIndex: number): Round => {
 
 const buildRounds = (settings: SessionSettings) => {
   const usedQuestionIds: string[] = [];
+  const shuffledQuestions = shuffleQuestions(mockQuestions);
 
   if (settings.categoryMode === 'shared') {
-    const pool = getQuestionsByCategory(settings.sharedCategory);
-    const safePool = pool.length > 0 ? pool : mockQuestions;
+    const pool =
+      settings.sharedCategory === 'all'
+        ? shuffledQuestions
+        : shuffledQuestions.filter((item) => item.category === settings.sharedCategory);
+    const safePool = pool.length > 0 ? pool : shuffledQuestions;
 
     return Array.from({ length: settings.roundsCount }, (_, index) => {
       const question = safePool[index] ?? safePool[index % safePool.length];
@@ -65,7 +75,11 @@ const buildRounds = (settings: SessionSettings) => {
 
   return Array.from({ length: settings.roundsCount }, (_, index) => {
     const category = settings.roundCategories[index] ?? 'all';
-    const pool = getQuestionsByCategory(category).filter((item) => !usedQuestionIds.includes(item.id));
+    const categoryPool =
+      category === 'all'
+        ? shuffledQuestions
+        : shuffledQuestions.filter((item) => item.category === category);
+    const pool = categoryPool.filter((item) => !usedQuestionIds.includes(item.id));
     const question = pool[0] ?? getFallbackQuestion(usedQuestionIds);
 
     usedQuestionIds.push(question.id);
@@ -287,7 +301,7 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
           item.id === playerId
             ? {
                 ...item,
-                hasGuessed: true,
+                hasGuessed: Boolean(matchingAnswer),
                 score: matchingAnswer
                   ? item.score + Math.max(1, Math.round(100 * (1 + (100 - matchingAnswer.percentage) / 100)))
                   : item.score,
@@ -443,6 +457,8 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
         player,
         isConnected: true,
         connectionError: null,
+        adminAccessCode: 'mock',
+        setAdminAccessCode: () => {},
         createSession: async () => session?.sessionId ?? null,
         joinSession,
         startGame: () => __setPhase('answering'),
@@ -476,14 +492,15 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
                 }
               : prev,
           ),
-        setCurrentTimer: (durationSec: number) =>
+        setCurrentTimer: (durationSec: number, delaySec = 0) =>
           setSession((prev) =>
             prev
               ? {
                   ...prev,
+                  phaseStartsAt: delaySec > 0 ? Date.now() + delaySec * 1000 : 0,
                   phaseEndsAt: prev.phasePaused
-                    ? Math.max(0, durationSec * 1000)
-                    : Date.now() + Math.max(0, durationSec * 1000),
+                    ? Math.max(0, (durationSec + delaySec) * 1000)
+                    : Date.now() + Math.max(0, (durationSec + delaySec) * 1000),
                 }
               : prev,
           ),

@@ -49,12 +49,13 @@ class RedisSessionRepository {
             this.cache.set(session.sessionId, {
                 ...session,
                 playerSockets: new Map(),
+                disconnectTimers: new Map(),
                 timer: undefined,
             });
         });
     }
     async save(session) {
-        const { playerSockets: _playerSockets, timer: _timer, ...serializedSession } = session;
+        const { playerSockets: _playerSockets, disconnectTimers: _disconnectTimers, timer: _timer, ...serializedSession } = session;
         await this.redis
             .multi()
             .set(this.getKey(session.sessionId), JSON.stringify(serializedSession))

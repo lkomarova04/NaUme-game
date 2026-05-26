@@ -1,11 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GameService = void 0;
+const crypto_1 = require("crypto");
 const game_1 = require("../config/game");
 const env_1 = require("../config/env");
 const generateSessionId_1 = require("../lib/generateSessionId");
 const containsProfanity_1 = require("../lib/containsProfanity");
 const normalizeText_1 = require("../lib/normalizeText");
+const PLAYER_RECONNECT_GRACE_MS = 30_000;
+const TOP_REVEAL_DURATION_MS = 10_000;
 class GameService {
     sessions;
     historyRepository;
@@ -30,6 +33,12 @@ class GameService {
         const session = this.sessions.get(sessionId);
         return session ? this.toSessionState(session) : undefined;
     }
+    getOrganizerToken(sessionId) {
+        return this.sessions.get(sessionId)?.organizerToken;
+    }
+    isOrganizerTokenValid(sessionId, organizerToken) {
+        return Boolean(organizerToken && this.sessions.get(sessionId)?.organizerToken === organizerToken);
+    }
     joinSession(sessionId, role, playerName, socketId) {
         const session = this.sessions.get(sessionId);
         if (!session) {
@@ -45,6 +54,11 @@ class GameService {
                 return { success: false };
             }
             if (socketId) {
+                const disconnectTimer = session.disconnectTimers.get(player.id);
+                if (disconnectTimer) {
+                    clearTimeout(disconnectTimer);
+                    session.disconnectTimers.delete(player.id);
+                }
                 const sockets = session.playerSockets.get(player.id) ?? new Set();
                 sockets.add(socketId);
                 session.playerSockets.set(player.id, sockets);
@@ -84,7 +98,7 @@ class GameService {
                 this.finishAnswering(session);
                 break;
             case 'guessing':
-                this.finishGuessing(session);
+                this.revealRoundTop(session);
                 break;
             case 'reveal':
                 this.finishGuessing(session);
@@ -115,12 +129,11 @@ class GameService {
                 round.topAnswers = this.buildTopAnswers(round.answers, round.question.id);
                 this.hooks.onTopAnswers?.(session.sessionId, this.cloneTopAnswers(round.topAnswers));
                 this.prepareRoundPlayers(session, { resetAnswers: false, resetGuesses: true });
-                this.setPhase(session, 'guessing', this.getGuessingDurationMs(session));
+                this.setPhase(session, 'guessing', this.getGuessingDurationMs(session), this.getStartDelayMs(session));
                 break;
             }
             case 'reveal':
-                this.forcePhase(sessionId, 'guessing');
-                return this.toSessionState(session);
+                this.revealRoundTop(session);
                 break;
             case 'leaderboard':
                 this.setPhase(session, 'leaderboard', 0);
@@ -278,7 +291,9 @@ class GameService {
                 pointsAwarded: awardedPoints,
             };
         }
-        player.hasGuessed = true;
+        if (matchedAnswer) {
+            player.hasGuessed = true;
+        }
         this.persist(session, { durable: false });
         this.emitGameEvent(session, {
             type: 'guess_submitted',
@@ -304,12 +319,22 @@ class GameService {
                 session.playerSockets.delete(playerId);
             }
         }
-        session.players = session.players.filter((player) => player.id !== playerId);
-        this.persist(session, { durable: false });
-        this.emitGameEvent(session, {
-            type: 'player_left',
-            playerId,
-        });
+        if (session.playerSockets.has(playerId) || session.disconnectTimers.has(playerId)) {
+            return;
+        }
+        const disconnectTimer = setTimeout(() => {
+            const latestSession = this.sessions.get(sessionId);
+            if (!latestSession || latestSession.playerSockets.has(playerId))
+                return;
+            latestSession.disconnectTimers.delete(playerId);
+            latestSession.players = latestSession.players.filter((player) => player.id !== playerId);
+            this.persist(latestSession, { durable: false });
+            this.emitGameEvent(latestSession, {
+                type: 'player_left',
+                playerId,
+            });
+        }, PLAYER_RECONNECT_GRACE_MS);
+        session.disconnectTimers.set(playerId, disconnectTimer);
     }
     getPlayerSockets(sessionId, playerId) {
         const session = this.sessions.get(sessionId);
@@ -358,10 +383,13 @@ class GameService {
         });
         return this.toSessionState(session);
     }
-    setCurrentTimer(sessionId, durationSec) {
+    setCurrentTimer(sessionId, durationSec, delaySec = 0) {
         const session = this.requireSession(sessionId);
+        const durationMs = this.clampTimerSeconds(durationSec) * 1000;
+        const delayMs = this.clampDelaySeconds(delaySec) * 1000;
         if (session.phase === 'lobby' || session.phasePaused) {
-            session.phaseEndsAt = Math.max(0, this.clampTimerSeconds(durationSec) * 1000);
+            session.phaseStartsAt = delayMs > 0 ? Date.now() + delayMs : 0;
+            session.phaseEndsAt = Math.max(0, durationMs + delayMs);
             this.persist(session, { durable: true });
             this.emitGameEvent(session, {
                 type: 'timer_changed',
@@ -371,7 +399,7 @@ class GameService {
             });
             return this.toSessionState(session);
         }
-        this.setPhase(session, session.phase, this.clampTimerSeconds(durationSec) * 1000);
+        this.setPhase(session, session.phase, durationMs, delayMs);
         return this.toSessionState(session);
     }
     finishAnswering(session) {
@@ -379,7 +407,7 @@ class GameService {
         round.topAnswers = this.buildTopAnswers(round.answers, round.question.id);
         this.hooks.onTopAnswers?.(session.sessionId, this.cloneTopAnswers(round.topAnswers));
         this.prepareRoundPlayers(session, { resetGuesses: true });
-        this.setPhase(session, 'guessing', this.getGuessingDurationMs(session));
+        this.setPhase(session, 'guessing', this.getGuessingDurationMs(session), this.getStartDelayMs(session));
     }
     finishGuessing(session) {
         const hasNextRound = session.roundIndex < session.rounds.length - 1;
@@ -434,6 +462,14 @@ class GameService {
             players: session.players.map((player) => this.clonePlayer(player)),
             topAnswers: this.cloneTopAnswers(this.getCurrentRound(session).topAnswers),
         });
+    }
+    revealRoundTop(session) {
+        const round = this.getCurrentRound(session);
+        round.topAnswers = round.topAnswers.map((answer) => ({
+            ...answer,
+            revealed: true,
+        }));
+        this.setPhase(session, 'reveal', TOP_REVEAL_DURATION_MS);
     }
     clearTimer(session) {
         if (session.timer) {
@@ -537,6 +573,7 @@ class GameService {
         const rounds = this.buildRoundsFromSettings(game_1.DEFAULT_SETTINGS);
         return {
             sessionId,
+            organizerToken: (0, crypto_1.randomBytes)(24).toString('hex'),
             eventName,
             phase: 'lobby',
             roundIndex: 0,
@@ -553,7 +590,24 @@ class GameService {
             phasePaused: false,
             isActive: false,
             playerSockets: new Map(),
+            disconnectTimers: new Map(),
         };
+    }
+    resumeTimers() {
+        for (const session of this.sessions.getAll()) {
+            if (session.phase === 'lobby' || session.phasePaused || session.phaseEndsAt <= Date.now()) {
+                continue;
+            }
+            const timeoutMs = Math.max(0, session.phaseEndsAt - Date.now());
+            session.timer = setTimeout(() => {
+                try {
+                    this.nextPhase(session.sessionId);
+                }
+                catch (error) {
+                    console.error('Failed to resume auto-advance phase', error);
+                }
+            }, timeoutMs);
+        }
     }
     buildRounds() {
         return this.buildRoundsFromSettings(game_1.DEFAULT_SETTINGS);
@@ -576,27 +630,27 @@ class GameService {
     buildRoundsFromSettings(settings) {
         const roundsCount = Math.max(1, settings.roundsCount);
         const usedQuestionIds = new Set();
+        const shuffledQuestionBank = this.shuffleQuestions(this.questionBank);
         const getPoolForRound = (roundIndex) => {
             if (settings.categoryMode === 'shared') {
                 if (settings.sharedCategory === 'all') {
-                    return this.questionBank;
+                    return shuffledQuestionBank;
                 }
-                const categoryPool = this.questionBank.filter((question) => question.category === settings.sharedCategory);
-                return categoryPool.length > 0 ? categoryPool : this.questionBank;
+                const categoryPool = shuffledQuestionBank.filter((question) => question.category === settings.sharedCategory);
+                return categoryPool.length > 0 ? categoryPool : shuffledQuestionBank;
             }
             const roundCategory = settings.roundCategories[roundIndex] ?? 'all';
             if (roundCategory === 'all') {
-                return this.questionBank;
+                return shuffledQuestionBank;
             }
-            const categoryPool = this.questionBank.filter((question) => question.category === roundCategory);
-            return categoryPool.length > 0 ? categoryPool : this.questionBank;
+            const categoryPool = shuffledQuestionBank.filter((question) => question.category === roundCategory);
+            return categoryPool.length > 0 ? categoryPool : shuffledQuestionBank;
         };
         return Array.from({ length: roundsCount }, (_, index) => {
             const roundPool = getPoolForRound(index);
             const unusedInPool = roundPool.filter((question) => !usedQuestionIds.has(question.id));
             const fallbackPool = unusedInPool.length > 0 ? unusedInPool : roundPool;
-            const randomIndex = Math.floor(Math.random() * fallbackPool.length);
-            const question = fallbackPool[randomIndex];
+            const question = fallbackPool[0];
             usedQuestionIds.add(question.id);
             return {
                 index,
@@ -605,6 +659,14 @@ class GameService {
                 topAnswers: [],
             };
         });
+    }
+    shuffleQuestions(questions) {
+        const shuffled = [...questions];
+        for (let index = shuffled.length - 1; index > 0; index -= 1) {
+            const randomIndex = Math.floor(Math.random() * (index + 1));
+            [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+        }
+        return shuffled;
     }
     toSessionState(session) {
         return {
