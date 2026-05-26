@@ -9,13 +9,15 @@ export interface GameContextValue {
   player: Player | null;
   isConnected: boolean;
   connectionError: string | null;
+  adminAccessCode: string;
+  setAdminAccessCode: (code: string) => void;
   createSession: (eventName: string) => Promise<string | null>;
   joinSession: (sessionId: string, playerName: string) => void;
   startGame: () => void;
   nextPhase: () => void;
   resetGame: () => void;
   setTimerPaused: (paused: boolean) => void;
-  setCurrentTimer: (durationSec: number) => void;
+  setCurrentTimer: (durationSec: number, delaySec?: number) => void;
   submitAnswer: (answer: string) => Promise<{ success: boolean; message?: string }>;
   submitGuess: (guess: string) => Promise<{ matched: boolean; answerText?: string; error?: string } | null>;
   revealTopAnswer: (answerId: string) => void;

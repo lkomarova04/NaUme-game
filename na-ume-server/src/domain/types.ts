@@ -73,6 +73,8 @@ export interface SessionAuthData {
   sessionId?: string;
   role?: Role;
   playerName?: string;
+  adminCode?: string;
+  organizerToken?: string;
 }
 
 export interface JoinSessionPayload {
@@ -127,12 +129,18 @@ export interface PauseTimerPayload extends SessionPhasePayload {
 
 export interface SetTimerPayload extends SessionPhasePayload {
   durationSec: number;
+  delaySec?: number;
 }
 
 export interface JoinSessionResponse {
   success: boolean;
   player?: Player;
   session?: SessionState;
+}
+
+export interface CreateSessionResponse {
+  sessionId?: string;
+  organizerToken?: string;
 }
 
 export interface GuessResult {
@@ -162,7 +170,9 @@ export type GameEvent =
   | { type: 'round_changed'; roundIndex: number };
 
 export interface InternalSession extends SessionState {
+  organizerToken: string;
   playerSockets: Map<string, Set<string>>;
+  disconnectTimers: Map<string, NodeJS.Timeout>;
   timer?: NodeJS.Timeout;
 }
 

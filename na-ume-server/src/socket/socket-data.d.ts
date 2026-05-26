@@ -8,6 +8,8 @@ declare module 'socket.io' {
       role?: Role;
       playerName?: string;
       playerId?: string;
+      adminAuthorized?: boolean;
+      organizerToken?: string;
     };
   }
 }

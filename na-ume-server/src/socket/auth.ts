@@ -10,5 +10,7 @@ export const parseSocketAuth = (socket: Socket): SessionAuthData => {
     sessionId: typeof rawAuth?.sessionId === 'string' ? rawAuth.sessionId : undefined,
     role: typeof rawAuth?.role === 'string' && VALID_ROLES.has(rawAuth.role) ? rawAuth.role : undefined,
     playerName: typeof rawAuth?.playerName === 'string' ? rawAuth.playerName : undefined,
+    adminCode: typeof rawAuth?.adminCode === 'string' ? rawAuth.adminCode : undefined,
+    organizerToken: typeof rawAuth?.organizerToken === 'string' ? rawAuth.organizerToken : undefined,
   };
 };
