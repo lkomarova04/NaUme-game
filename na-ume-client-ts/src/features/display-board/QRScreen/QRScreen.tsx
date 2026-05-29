@@ -8,10 +8,10 @@ type QRScreenProps = {
 
 const QRScreen = ({ sessionId }: QRScreenProps) => {
   const joinURL = useMemo(() => {
-    return `${window.location.origin}/player/${sessionId}`;
-  }, [sessionId]);
+    return window.location.origin;
+  }, []);
   const joinBaseURL = useMemo(() => {
-    return `${window.location.origin}/player`;
+    return window.location.origin;
   }, []);
 
   return (
@@ -28,7 +28,7 @@ const QRScreen = ({ sessionId }: QRScreenProps) => {
           fgColor="#0b1020"
           includeMargin
           className="qr-img"
-          title={`QR code for session ${sessionId}`}
+          title={`Код подключения к сессии ${sessionId}`}
         />
       </div>
       <div className="qr-link">

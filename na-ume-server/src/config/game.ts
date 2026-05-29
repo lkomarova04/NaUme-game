@@ -140,6 +140,6 @@ export const DEFAULT_SETTINGS: SessionSettings = {
   roundsCount: 5,
   roundCategories: Array.from({ length: 5 }, () => 'all'),
   answeringDurationSec: 30,
-  guessingDurationSec: 200,
+  guessingDurationSec: 30,
   startDelaySec: 0,
 };

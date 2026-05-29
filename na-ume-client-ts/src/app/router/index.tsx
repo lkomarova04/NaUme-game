@@ -11,7 +11,7 @@ export const router = createBrowserRouter([
     children: [
       {
         path: '/',
-        element: <Navigate to="/admin" replace />,
+        element: <PlayerPage />,
       },
       {
         path: '/display/:sessionId',
@@ -32,6 +32,10 @@ export const router = createBrowserRouter([
       {
         path: '/admin/:sessionId',
         element: <AdminPage />,
+      },
+      {
+        path: '*',
+        element: <Navigate to="/" replace />,
       },
     ],
   },

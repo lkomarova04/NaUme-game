@@ -14,7 +14,7 @@ exports.env = {
     basePoints: Number(process.env.BASE_POINTS ?? 100),
     maxPlayersPerSession: Number(process.env.MAX_PLAYERS_PER_SESSION ?? 500),
     answeringDurationMs: Number(process.env.ANSWERING_DURATION_MS ?? 30_000),
-    guessingDurationMs: Number(process.env.GUESSING_DURATION_MS ?? 200_000),
+    guessingDurationMs: Number(process.env.GUESSING_DURATION_MS ?? 30_000),
     leaderboardDurationMs: Number(process.env.LEADERBOARD_DURATION_MS ?? 10_000),
     adminAccessCode: process.env.ADMIN_ACCESS_CODE ?? 'admin',
 };

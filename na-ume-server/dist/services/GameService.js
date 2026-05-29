@@ -260,7 +260,7 @@ class GameService {
     }
     submitGuess(sessionId, playerId, guess) {
         const session = this.requireSession(sessionId);
-        if (session.phase !== 'guessing') {
+        if (session.phase !== 'guessing' || this.isPhaseWaitingToStart(session)) {
             throw new Error('Guessing is closed');
         }
         const player = session.players.find((item) => item.id === playerId);

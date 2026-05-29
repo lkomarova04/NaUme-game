@@ -16,6 +16,7 @@ const SERVER_URL =
 type SocketRole = 'player' | 'organizer' | 'display';
 type AnswerResult = { success: boolean; message?: string };
 type GuessResult = { matched: boolean; answerText?: string; error?: string } | null;
+type AdminVerifyResult = { success: boolean; message?: string };
 type SocketAuthPayload = {
   sessionId?: string;
   role: SocketRole;
@@ -23,6 +24,8 @@ type SocketAuthPayload = {
   adminCode?: string;
   organizerToken?: string;
 };
+
+const LAST_ADMIN_SESSION_KEY = 'na-ume-last-admin-session';
 type GameEvent =
   | { type: 'player_joined'; player: Player }
   | { type: 'player_left'; playerId: string }
@@ -54,6 +57,7 @@ const getRouteSessionId = (pathname: string) => {
 };
 
 const getRouteRole = (pathname: string): SocketRole => {
+  if (pathname === '/') return 'player';
   if (pathname.startsWith('/player')) return 'player';
   if (pathname.startsWith('/display')) return 'display';
   return 'organizer';
@@ -83,9 +87,7 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
   const [player, setPlayer] = useState<Player | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [adminAccessCode, setAdminAccessCodeState] = useState(() => {
-    return window.localStorage.getItem('na-ume-admin-code') ?? '';
-  });
+  const [adminAccessCode, setAdminAccessCodeState] = useState('');
   const socketRef = useRef<Socket | null>(null);
   const authRef = useRef<SocketAuthPayload>({ role: routeRole, sessionId: routeSessionId });
   const pendingJoinRef = useRef<{ sessionId: string; playerName: string } | null>(null);
@@ -267,7 +269,8 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
       sessionId: routeSessionId,
       playerName: pendingJoinRef.current?.playerName,
       adminCode: routeRole === 'organizer' ? adminAccessCode : undefined,
-      organizerToken: routeRole === 'organizer' ? getStoredOrganizerToken(routeSessionId) : undefined,
+      organizerToken:
+        routeRole === 'organizer' && adminAccessCode ? getStoredOrganizerToken(routeSessionId) : undefined,
     };
 
     if (routeRole === 'player' && !pendingJoinRef.current) {
@@ -299,8 +302,66 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
       setAdminAccessCode: (code: string) => {
         const normalizedCode = code.trim();
         setAdminAccessCodeState(normalizedCode);
-        window.localStorage.setItem('na-ume-admin-code', normalizedCode);
         setConnectionError(null);
+      },
+      verifyAdminAccess: async (code: string) => {
+        const normalizedCode = code.trim();
+
+        if (!normalizedCode) {
+          setAdminAccessCodeState('');
+          setConnectionError('Введите код администратора.');
+          return false;
+        }
+
+        return new Promise<boolean>((resolve) => {
+          const verifySocket = io(SERVER_URL, {
+            autoConnect: true,
+            transports: ['polling', 'websocket'],
+            auth: {
+              role: 'organizer',
+              adminCode: normalizedCode,
+            },
+          });
+          let finished = false;
+          const finish = (success: boolean, message?: string) => {
+            if (finished) return;
+            finished = true;
+
+            verifySocket.removeAllListeners();
+            verifySocket.disconnect();
+
+            if (success) {
+              setAdminAccessCodeState(normalizedCode);
+              setConnectionError(null);
+              connectSocket({
+                role: 'organizer',
+                sessionId: routeSessionId,
+                adminCode: normalizedCode,
+                organizerToken: getStoredOrganizerToken(routeSessionId),
+              });
+            } else {
+              setAdminAccessCodeState('');
+              setConnectionError(message ?? 'Неверный код администратора.');
+            }
+
+            resolve(success);
+          };
+          const timeoutId = window.setTimeout(() => {
+            finish(false, 'Не удалось проверить код администратора.');
+          }, 5000);
+
+          verifySocket.on('connect', () => {
+            verifySocket.emit('organizer:verify-access', (response: AdminVerifyResult) => {
+              window.clearTimeout(timeoutId);
+              finish(response.success, response.message);
+            });
+          });
+
+          verifySocket.on('connect_error', (error) => {
+            window.clearTimeout(timeoutId);
+            finish(false, error.message);
+          });
+        });
       },
       createSession: async (eventName: string) => {
         if (!socketRef.current) return null;
@@ -322,6 +383,7 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
                 );
               }
 
+              window.localStorage.setItem(LAST_ADMIN_SESSION_KEY, response.sessionId);
               navigate(`/admin/${response.sessionId}`);
               resolve(response.sessionId);
             },
@@ -442,7 +504,7 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
       __setTopAnswers: (_answers: TopAnswer[]) => {},
       __setRawAnswers: (_answers: RawAnswer[]) => {},
     };
-  }, [adminAccessCode, connectionError, isConnected, navigate, player, session]);
+  }, [adminAccessCode, connectionError, isConnected, navigate, player, routeSessionId, session]);
 
   return <GameContext.Provider value={contextValue}>{children}</GameContext.Provider>;
 };

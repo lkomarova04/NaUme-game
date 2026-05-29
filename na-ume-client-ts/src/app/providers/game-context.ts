@@ -11,6 +11,7 @@ export interface GameContextValue {
   connectionError: string | null;
   adminAccessCode: string;
   setAdminAccessCode: (code: string) => void;
+  verifyAdminAccess: (code: string) => Promise<boolean>;
   createSession: (eventName: string) => Promise<string | null>;
   joinSession: (sessionId: string, playerName: string) => void;
   startGame: () => void;

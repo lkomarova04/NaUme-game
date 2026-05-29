@@ -16,7 +16,7 @@ import { GameContext } from './game-context';
 const PHASE_DURATIONS: Record<GamePhase, number> = {
   lobby: 0,
   answering: 30000,
-  guessing: 20000,
+  guessing: 30000,
   reveal: 15000,
   leaderboard: 10000,
 };
@@ -150,7 +150,7 @@ const createDefaultSession = (): SessionState => {
     roundsCount: 5,
     roundCategories: Array.from({ length: 5 }, () => 'all'),
     answeringDurationSec: 30,
-    guessingDurationSec: 200,
+    guessingDurationSec: 30,
     startDelaySec: 0,
   };
 
@@ -459,6 +459,7 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
         connectionError: null,
         adminAccessCode: 'mock',
         setAdminAccessCode: () => {},
+        verifyAdminAccess: async () => true,
         createSession: async () => session?.sessionId ?? null,
         joinSession,
         startGame: () => __setPhase('answering'),

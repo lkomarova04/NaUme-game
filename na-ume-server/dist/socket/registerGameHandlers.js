@@ -11,9 +11,9 @@ const requireOrganizer = (socket) => {
         throw new Error('Organizer privileges required');
     }
 };
-const requireOrganizerForSession = (socket, gameService, sessionId) => {
+const requireOrganizerForSession = (socket) => {
     requireOrganizer(socket);
-    if (!socket.data.adminAuthorized && !gameService.isOrganizerTokenValid(sessionId, socket.data.organizerToken)) {
+    if (!socket.data.adminAuthorized) {
         throw new Error('Organizer privileges required');
     }
 };
@@ -36,9 +36,7 @@ const registerGameHandlers = (_io, socket, gameService) => {
     socket.data.adminAuthorized = isOrganizerAuthorized(auth.role, auth.adminCode);
     socket.data.organizerToken = auth.organizerToken;
     if (auth.sessionId &&
-        (auth.role !== 'organizer' ||
-            socket.data.adminAuthorized ||
-            gameService.isOrganizerTokenValid(auth.sessionId, socket.data.organizerToken))) {
+        (auth.role !== 'organizer' || socket.data.adminAuthorized)) {
         socket.join(auth.sessionId);
         joinRoleRooms(socket, auth.sessionId, auth.role);
     }
@@ -53,10 +51,9 @@ const registerGameHandlers = (_io, socket, gameService) => {
             socket.data.role = role;
             socket.data.sessionId = payload.sessionId;
             if (role === 'organizer' &&
-                !socket.data.adminAuthorized &&
-                !gameService.isOrganizerTokenValid(payload.sessionId, socket.data.organizerToken)) {
+                !socket.data.adminAuthorized) {
                 callback?.({ success: false });
-                emitError(socket, { code: 'INVALID_ADMIN_ACCESS_CODE', message: 'Неверный код админки.' });
+                emitError(socket, { code: 'INVALID_ADMIN_ACCESS_CODE', message: 'Неверный код администратора.' });
                 return;
             }
             socket.join(payload.sessionId);
@@ -78,6 +75,14 @@ const registerGameHandlers = (_io, socket, gameService) => {
                 message: error instanceof Error ? error.message : 'Не удалось присоединиться к сессии.',
             });
         }
+    });
+    socket.on('organizer:verify-access', (callback) => {
+        if (socket.data.adminAuthorized) {
+            callback?.({ success: true });
+            return;
+        }
+        callback?.({ success: false, message: 'Неверный код администратора.' });
+        emitError(socket, { code: 'INVALID_ADMIN_ACCESS_CODE', message: 'Неверный код администратора.' });
     });
     socket.on('organizer:create-session', (payload, callback) => {
         try {
@@ -103,7 +108,7 @@ const registerGameHandlers = (_io, socket, gameService) => {
     });
     socket.on('organizer:start-game', (payload) => {
         try {
-            requireOrganizerForSession(socket, gameService, payload.sessionId);
+            requireOrganizerForSession(socket);
             gameService.startGame(payload.sessionId);
         }
         catch (error) {
@@ -115,7 +120,7 @@ const registerGameHandlers = (_io, socket, gameService) => {
     });
     socket.on('organizer:next-phase', (payload) => {
         try {
-            requireOrganizerForSession(socket, gameService, payload.sessionId);
+            requireOrganizerForSession(socket);
             gameService.nextPhase(payload.sessionId);
         }
         catch (error) {
@@ -127,7 +132,7 @@ const registerGameHandlers = (_io, socket, gameService) => {
     });
     socket.on('organizer:reveal-answer', (payload) => {
         try {
-            requireOrganizerForSession(socket, gameService, payload.sessionId);
+            requireOrganizerForSession(socket);
             gameService.revealAnswer(payload.sessionId, payload.answerIndex);
         }
         catch (error) {
@@ -139,7 +144,7 @@ const registerGameHandlers = (_io, socket, gameService) => {
     });
     socket.on('organizer:pause-timer', (payload) => {
         try {
-            requireOrganizerForSession(socket, gameService, payload.sessionId);
+            requireOrganizerForSession(socket);
             gameService.setTimerPaused(payload.sessionId, payload.paused);
         }
         catch (error) {
@@ -151,7 +156,7 @@ const registerGameHandlers = (_io, socket, gameService) => {
     });
     socket.on('organizer:set-timer', (payload) => {
         try {
-            requireOrganizerForSession(socket, gameService, payload.sessionId);
+            requireOrganizerForSession(socket);
             gameService.setCurrentTimer(payload.sessionId, payload.durationSec, payload.delaySec);
         }
         catch (error) {
@@ -163,7 +168,7 @@ const registerGameHandlers = (_io, socket, gameService) => {
     });
     socket.on('session:phase:set', (payload) => {
         try {
-            requireOrganizerForSession(socket, gameService, payload.sessionId);
+            requireOrganizerForSession(socket);
             gameService.forcePhase(payload.sessionId, payload.phase);
         }
         catch (error) {
@@ -175,7 +180,7 @@ const registerGameHandlers = (_io, socket, gameService) => {
     });
     socket.on('session:settings:update', (payload) => {
         try {
-            requireOrganizerForSession(socket, gameService, payload.sessionId);
+            requireOrganizerForSession(socket);
             gameService.updateSettings(payload.sessionId, payload.settings);
         }
         catch (error) {
@@ -187,7 +192,7 @@ const registerGameHandlers = (_io, socket, gameService) => {
     });
     socket.on('session:round:set', (payload) => {
         try {
-            requireOrganizerForSession(socket, gameService, payload.sessionId);
+            requireOrganizerForSession(socket);
             gameService.setRound(payload.sessionId, payload.roundIndex);
         }
         catch (error) {
@@ -199,7 +204,7 @@ const registerGameHandlers = (_io, socket, gameService) => {
     });
     socket.on('answer:delete', (payload) => {
         try {
-            requireOrganizerForSession(socket, gameService, payload.sessionId);
+            requireOrganizerForSession(socket);
             gameService.deleteAnswer(payload.sessionId, payload.answerId);
         }
         catch (error) {
@@ -211,7 +216,7 @@ const registerGameHandlers = (_io, socket, gameService) => {
     });
     socket.on('organizer:reset-game', (payload) => {
         try {
-            requireOrganizerForSession(socket, gameService, payload.sessionId);
+            requireOrganizerForSession(socket);
             gameService.resetGame(payload.sessionId, payload.keepPlayers ?? true);
         }
         catch (error) {
