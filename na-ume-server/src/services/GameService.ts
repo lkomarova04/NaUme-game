@@ -327,7 +327,7 @@ export class GameService {
 
   submitGuess(sessionId: string, playerId: string, guess: string) {
     const session = this.requireSession(sessionId);
-    if (session.phase !== 'guessing') {
+    if (session.phase !== 'guessing' || this.isPhaseWaitingToStart(session)) {
       throw new Error('Guessing is closed');
     }
 

@@ -75,6 +75,26 @@ describe('GameService', () => {
         expect(matchedGuess.result.matched).toBe(true);
         expect(matchedGuess.player.hasGuessed).toBe(true);
     });
+    it('delays guess submission until the guessing timer starts', () => {
+        const { service } = (0, testUtils_1.createGameService)();
+        const session = service.createSession('Delayed Guess Event');
+        const alice = service.joinSession(session.sessionId, 'player', 'Алиса', 'socket-alice').player;
+        const boris = service.joinSession(session.sessionId, 'player', 'Борис', 'socket-boris').player;
+        service.updateSettings(session.sessionId, {
+            ...session.settings,
+            startDelaySec: 5,
+        });
+        service.startGame(session.sessionId);
+        jest.advanceTimersByTime(5000);
+        service.submitAnswer(session.sessionId, alice.id, 'coffee');
+        service.submitAnswer(session.sessionId, boris.id, 'tea');
+        const guessing = service.nextPhase(session.sessionId);
+        expect(guessing.phase).toBe('guessing');
+        expect(guessing.phaseStartsAt).toBe(Date.now() + 5000);
+        expect(() => service.submitGuess(session.sessionId, alice.id, 'coffee')).toThrow(/Guessing is closed/);
+        jest.advanceTimersByTime(5000);
+        expect(service.submitGuess(session.sessionId, alice.id, 'coffee').result.matched).toBe(true);
+    });
     it('reveals the top answers before moving to the next round', () => {
         const { service } = (0, testUtils_1.createGameService)();
         const session = service.createSession('Reveal Top Event');
