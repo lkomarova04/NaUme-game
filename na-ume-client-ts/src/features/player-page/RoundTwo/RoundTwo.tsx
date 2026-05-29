@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import type { FormEvent } from 'react';
+import { useState } from "react";
+import type { FormEvent } from "react";
 
-import type { TopAnswer } from '@/entities/answer';
-import type { Question } from '@/entities/question';
-import { useTimer } from '@/shared/lib';
+import type { TopAnswer } from "@/entities/answer";
+import type { Question } from "@/entities/question";
+import { useTimer } from "@/shared/lib";
 
-import './RoundTwo.css';
+import "./RoundTwo.css";
 
 type RoundTwoProps = {
   question: Question;
@@ -33,7 +33,7 @@ const RoundTwo = ({
   readOnly = false,
 }: RoundTwoProps) => {
   const timeLeft = useTimer(phaseEndsAt, phasePaused, phaseStartsAt);
-  const [guessValue, setGuessValue] = useState('');
+  const [guessValue, setGuessValue] = useState("");
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -43,16 +43,18 @@ const RoundTwo = ({
     }
 
     onSubmit(guessValue);
-    setGuessValue('');
+    setGuessValue("");
   };
 
   return (
     <div className="player-guessing-screen">
       <div className="player-guessing-shell">
         <div className="player-guessing-header">
-          <div className="player-question-round">Раунд {currentRound}/{totalRounds}</div>
+          <div className="player-question-round">
+            Раунд {currentRound}/{totalRounds}
+          </div>
           <h1 className="player-question-text">{question.text}</h1>
-          <div className="player-question-timer">{timeLeft ?? ''}</div>
+          <div className="player-question-timer">{timeLeft ?? ""}</div>
         </div>
 
         <div className="player-roundtwo-board">
@@ -74,11 +76,14 @@ const RoundTwo = ({
                 className="player-guess-input"
                 value={guessValue}
                 onChange={(event) => setGuessValue(event.target.value)}
-                placeholder="Введите ответ как в Сто к одному"
+                placeholder="Введите ответ"
               />
             </label>
 
-            <button className="main-page__btn player-guess-submit" type="submit">
+            <button
+              className="main-page__btn player-guess-submit"
+              type="submit"
+            >
               Отправить вариант
             </button>
           </form>
