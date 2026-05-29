@@ -34,6 +34,8 @@ const RoundTwo = ({
 }: RoundTwoProps) => {
   const timeLeft = useTimer(phaseEndsAt, phasePaused, phaseStartsAt);
   const [guessValue, setGuessValue] = useState("");
+  const isWaiting = phaseStartsAt > Date.now();
+  const isDisabled = readOnly || isWaiting;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -77,12 +79,14 @@ const RoundTwo = ({
                 value={guessValue}
                 onChange={(event) => setGuessValue(event.target.value)}
                 placeholder="Введите ответ"
+                disabled={isDisabled}
               />
             </label>
 
             <button
-              className="main-page__btn player-guess-submit"
+              className={`main-page__btn player-guess-submit${isDisabled ? ' main-page__btn--disabled' : ''}`}
               type="submit"
+              disabled={isDisabled}
             >
               Отправить вариант
             </button>

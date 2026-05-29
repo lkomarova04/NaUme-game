@@ -5,6 +5,7 @@ import { getCurrentRound } from '@/entities/session';
 import { useTimer } from '@/shared/lib';
 
 const BACKGROUND_MUSIC_SRC = '/audio/background.mp3';
+const TIMER_START_SRC = '/audio/timer-start.mp3';
 const TIMER_WARNING_SRC = '/audio/timer-warning.mp3';
 const ANSWER_REVEAL_SRC = '/audio/answer-reveal.mp3';
 
@@ -25,8 +26,11 @@ const playAudio = async (audio: HTMLAudioElement | null) => {
 
 export const DisplayAudio = ({ session }: DisplayAudioProps) => {
   const backgroundAudioRef = useRef<HTMLAudioElement | null>(null);
+  const timerStartAudioRef = useRef<HTMLAudioElement | null>(null);
   const warningAudioRef = useRef<HTMLAudioElement | null>(null);
   const revealAudioRef = useRef<HTMLAudioElement | null>(null);
+  const timerStartPlayedKeyRef = useRef('');
+  const timerStartReadyRef = useRef(false);
   const warningPlayedKeyRef = useRef('');
   const revealedAnswerIdsRef = useRef<Set<string>>(new Set());
   const hasMountedRef = useRef(false);
@@ -35,6 +39,7 @@ export const DisplayAudio = ({ session }: DisplayAudioProps) => {
   const timeLeft = useTimer(session.phaseEndsAt || undefined, session.phasePaused, session.phaseStartsAt);
 
   const timerKey = `${session.phase}:${session.roundIndex}:${session.phaseStartsAt}:${session.phaseEndsAt}`;
+  const timerStartKey = `${session.phase}:${session.roundIndex}`;
   const revealedAnswerIds = useMemo(() => {
     return currentRound.topAnswers.filter((answer) => answer.revealed).map((answer) => answer.id);
   }, [currentRound.topAnswers]);
@@ -44,6 +49,9 @@ export const DisplayAudio = ({ session }: DisplayAudioProps) => {
     backgroundAudio.loop = true;
     backgroundAudio.volume = 0.35;
 
+    const timerStartAudio = new Audio(TIMER_START_SRC);
+    timerStartAudio.volume = 0.9;
+
     const warningAudio = new Audio(TIMER_WARNING_SRC);
     warningAudio.volume = 0.85;
 
@@ -51,6 +59,7 @@ export const DisplayAudio = ({ session }: DisplayAudioProps) => {
     revealAudio.volume = 0.9;
 
     backgroundAudioRef.current = backgroundAudio;
+    timerStartAudioRef.current = timerStartAudio;
     warningAudioRef.current = warningAudio;
     revealAudioRef.current = revealAudio;
 
@@ -67,17 +76,44 @@ export const DisplayAudio = ({ session }: DisplayAudioProps) => {
       window.removeEventListener('pointerdown', unlockAudio);
       window.removeEventListener('keydown', unlockAudio);
       backgroundAudio.pause();
+      timerStartAudio.pause();
       warningAudio.pause();
       revealAudio.pause();
       backgroundAudioRef.current = null;
+      timerStartAudioRef.current = null;
       warningAudioRef.current = null;
       revealAudioRef.current = null;
     };
   }, []);
 
   useEffect(() => {
+    if (!timerStartReadyRef.current) {
+      timerStartReadyRef.current = true;
+      timerStartPlayedKeyRef.current = timerStartKey;
+      return;
+    }
+
+    if (session.phase !== 'answering' && session.phase !== 'guessing') return;
+    if (session.phasePaused || session.phaseEndsAt <= 0) return;
+    if (timerStartPlayedKeyRef.current === timerStartKey) return;
+
+    timerStartPlayedKeyRef.current = timerStartKey;
+
+    const delayMs = Math.max(0, session.phaseStartsAt - Date.now());
+    const timeoutId = window.setTimeout(() => {
+      if (timerStartAudioRef.current) {
+        timerStartAudioRef.current.currentTime = 0;
+      }
+      void playAudio(timerStartAudioRef.current);
+    }, delayMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [session.phase, session.phaseEndsAt, session.phasePaused, session.phaseStartsAt, timerStartKey]);
+
+  useEffect(() => {
     if (timeLeft === null || session.phasePaused) return;
     if (session.phase !== 'answering' && session.phase !== 'guessing') return;
+    if (session.phaseStartsAt > Date.now()) return;
     if (timeLeft > 5) return;
     if (warningPlayedKeyRef.current === timerKey) return;
 

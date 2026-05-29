@@ -33,7 +33,7 @@ const PlayerMainPage = ({
           <div className="input-wrapper main-page__session-input">
             <input
               className="main-page__input main-page__input--center"
-              placeholder="Номер сессии"
+              placeholder="Код сессии"
               value={sessionCode}
               onChange={(event) => onSessionCodeChange?.(event.target.value)}
             />
@@ -49,7 +49,7 @@ const PlayerMainPage = ({
           />
         </div>
         <button className="main-page__btn" onClick={onStart}>
-          {joined ? 'Подключено' : 'Начнем'}
+          {joined ? 'Подключено' : 'Подключиться'}
         </button>
         {status ? <p className="main-page__status">{status}</p> : null}
       </div>

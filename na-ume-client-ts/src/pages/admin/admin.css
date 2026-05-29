@@ -141,7 +141,6 @@
 .admin-primary-button,
 .admin-hero-actions button,
 .admin-actions button,
-.admin-manual-timer button,
 .admin-list-row button {
   width: 100%;
   min-height: 44px;
@@ -178,7 +177,6 @@
 }
 
 .admin-actions button,
-.admin-manual-timer button,
 .admin-list-row button,
 .admin-hero-actions button {
   cursor: pointer;
@@ -199,13 +197,6 @@
   margin-top: 6px;
   font-size: 38px;
   line-height: 1;
-}
-
-.admin-manual-timer {
-  display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(120px, 1fr) 190px;
-  gap: 12px;
-  align-items: end;
 }
 
 .admin-status {
@@ -266,8 +257,7 @@
   }
 
   .admin-grid,
-  .admin-stats,
-  .admin-manual-timer {
+  .admin-stats {
     grid-template-columns: 1fr;
   }
 
