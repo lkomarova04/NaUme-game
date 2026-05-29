@@ -17,8 +17,8 @@ const PHASE_DURATIONS: Record<GamePhase, number> = {
   lobby: 0,
   answering: 30000,
   guessing: 30000,
-  reveal: 15000,
-  leaderboard: 10000,
+  reveal: 10000,
+  leaderboard: 0,
 };
 
 const EMPTY_TOP_ANSWER_TEXT = 'Пусто';
@@ -469,20 +469,7 @@ export const MockGameProvider = ({ children }: { children: ReactNode }) => {
           const next = order[Math.min(currentIndex + 1, order.length - 1)];
           __setPhase(next);
         },
-        resetGame: () =>
-          setSession((prev) =>
-            prev
-              ? {
-                  ...createDefaultSession(),
-                  players: prev.players.map((player) => ({
-                    ...player,
-                    score: 0,
-                    hasAnswered: false,
-                    hasGuessed: false,
-                  })),
-                }
-              : prev,
-          ),
+        resetGame: () => setSession(null),
         setTimerPaused: (paused: boolean) =>
           setSession((prev) =>
             prev

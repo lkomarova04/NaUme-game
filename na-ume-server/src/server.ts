@@ -50,6 +50,9 @@ const bootstrap = async () => {
     onGameEvent: (sessionId, event) => {
       io.to(getEventRoom(sessionId, event)).emit('game:event', event);
     },
+    onSessionClosed: (sessionId) => {
+      io.to(sessionId).emit('session:closed', { sessionId });
+    },
   });
   gameService.resumeTimers();
 

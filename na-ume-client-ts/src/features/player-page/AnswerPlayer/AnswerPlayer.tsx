@@ -1,9 +1,12 @@
 import { useTimer } from '@/shared/lib';
 
 import '../PlayerMainPage/PlayerMainPage.css';
-import check from './check-square.png';
+import '../RoundTwo/RoundTwo.css';
 
 type AnswerPlayerProps = {
+  question: string;
+  currentRound: number;
+  totalRounds: number;
   value: string;
   onChange: (value: string) => void;
   onStart: () => void;
@@ -15,6 +18,9 @@ type AnswerPlayerProps = {
 };
 
 const AnswerPlayer = ({
+  question,
+  currentRound,
+  totalRounds,
   value,
   onChange,
   onStart,
@@ -29,32 +35,40 @@ const AnswerPlayer = ({
   const isDisabled = disabled || isWaiting;
 
   return (
-    <div className="main-page">
-      <div className="main-page__body">
-        {timeLeft !== null ? (
-          <div className="main-page__timer">
-            {isWaiting ? 'Старт через ' : ''}
-            {timeLeft}
+    <div className="player-guessing-screen">
+      <div className="player-guessing-shell player-answering-shell">
+        <div className="player-guessing-header">
+          <div className="player-question-round">
+            Раунд {currentRound}/{totalRounds}
           </div>
-        ) : null}
-        <div className="input-wrapper">
-          <img src={check} className="input-icon" alt="answer" />
+          <h1 className="player-question-text">{question}</h1>
+          {timeLeft !== null ? (
+            <div className="player-question-timer">
+              {isWaiting ? 'Старт через ' : ''}
+              {timeLeft}
+            </div>
+          ) : null}
+        </div>
+
+        <label className="player-input-shell">
+          <span className="player-input-label">Ваш ответ</span>
           <input
-            className="main-page__input"
+            className="player-guess-input"
             placeholder="Вариант ответа"
             value={value}
             onChange={(event) => onChange(event.target.value)}
             disabled={isDisabled}
           />
-        </div>
+        </label>
+
         <button
-          className={`main-page__btn${isDisabled ? ' main-page__btn--disabled' : ''}`}
+          className={`main-page__btn player-guess-submit${isDisabled ? ' main-page__btn--disabled' : ''}`}
           onClick={onStart}
           disabled={isDisabled}
         >
           Отправить
         </button>
-        {status ? <p className="main-page__status">{status}</p> : null}
+        {status ? <p className="player-guess-status">{status}</p> : null}
       </div>
     </div>
   );

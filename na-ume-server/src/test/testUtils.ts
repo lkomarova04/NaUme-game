@@ -7,6 +7,7 @@ import { GameService } from '../services/GameService';
 export const createGameService = () => {
   const sessionUpdates: SessionState[] = [];
   const topAnswersEvents: Array<{ sessionId: string; topAnswers: TopAnswer[] }> = [];
+  const closedSessions: string[] = [];
 
   const service = new GameService(
     new InMemorySessionRepository(),
@@ -19,8 +20,11 @@ export const createGameService = () => {
       onTopAnswers: (sessionId, topAnswers) => {
         topAnswersEvents.push({ sessionId, topAnswers });
       },
+      onSessionClosed: (sessionId) => {
+        closedSessions.push(sessionId);
+      },
     },
   );
 
-  return { service, sessionUpdates, topAnswersEvents };
+  return { service, sessionUpdates, topAnswersEvents, closedSessions };
 };

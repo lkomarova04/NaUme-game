@@ -69,10 +69,14 @@ const registerGameHandlers = (_io, socket, gameService) => {
             }
         }
         catch (error) {
+            const message = error instanceof Error ? error.message : 'Не удалось присоединиться к сессии.';
+            const clientMessage = error instanceof Error && error.message === 'Player name contains inappropriate language'
+                ? 'Ник содержит недопустимую брань.'
+                : message;
             callback?.({ success: false });
             emitError(socket, {
                 code: 'JOIN_FAILED',
-                message: error instanceof Error ? error.message : 'Не удалось присоединиться к сессии.',
+                message: clientMessage,
             });
         }
     });
@@ -214,12 +218,14 @@ const registerGameHandlers = (_io, socket, gameService) => {
             });
         }
     });
-    socket.on('organizer:reset-game', (payload) => {
+    socket.on('organizer:reset-game', (payload, callback) => {
         try {
             requireOrganizerForSession(socket);
             gameService.resetGame(payload.sessionId, payload.keepPlayers ?? true);
+            callback?.({ success: true });
         }
         catch (error) {
+            callback?.({ success: false });
             emitError(socket, {
                 code: 'RESET_GAME_FAILED',
                 message: error instanceof Error ? error.message : 'Не удалось сбросить игру.',

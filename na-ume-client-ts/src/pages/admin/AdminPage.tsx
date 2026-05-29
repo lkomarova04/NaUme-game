@@ -143,7 +143,6 @@ const AdminPage = () => {
   }
 
   const { settings } = session;
-  const roundTimerSec = Math.min(settings.answeringDurationSec, settings.guessingDurationSec);
   const answeredPlayersCount = new Set(currentRound.answers.map((answer) => answer.playerId)).size;
   const guessedPlayersCount = session.players.filter((player) => player.hasGuessed).length;
   const revealedAnswersCount = currentRound.topAnswers.filter((answer) => answer.revealed).length;
@@ -292,17 +291,48 @@ const AdminPage = () => {
 
           <div className="admin-timer-settings">
             <label className="admin-field">
-              <span>Таймер фазы, сек.</span>
+              <span>Сбор ответов, сек.</span>
               <input
                 type="number"
                 min={5}
                 max={3600}
-                value={roundTimerSec}
+                value={settings.answeringDurationSec}
                 onChange={(event) =>
                   updateSettings({
                     ...settings,
                     answeringDurationSec: Number(event.target.value),
+                  })
+                }
+              />
+            </label>
+
+            <label className="admin-field">
+              <span>Угадывание, сек.</span>
+              <input
+                type="number"
+                min={5}
+                max={3600}
+                value={settings.guessingDurationSec}
+                onChange={(event) =>
+                  updateSettings({
+                    ...settings,
                     guessingDurationSec: Number(event.target.value),
+                  })
+                }
+              />
+            </label>
+
+            <label className="admin-field">
+              <span>Задержка старта, сек.</span>
+              <input
+                type="number"
+                min={0}
+                max={600}
+                value={settings.startDelaySec}
+                onChange={(event) =>
+                  updateSettings({
+                    ...settings,
+                    startDelaySec: Number(event.target.value),
                   })
                 }
               />

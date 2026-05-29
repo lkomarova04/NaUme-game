@@ -8,6 +8,7 @@ const GameService_1 = require("../services/GameService");
 const createGameService = () => {
     const sessionUpdates = [];
     const topAnswersEvents = [];
+    const closedSessions = [];
     const service = new GameService_1.GameService(new InMemorySessionRepository_1.InMemorySessionRepository(), new HistoryRepository_1.NoopHistoryRepository(), game_1.QUESTION_BANK, {
         onSessionUpdate: (session) => {
             sessionUpdates.push(session);
@@ -15,7 +16,10 @@ const createGameService = () => {
         onTopAnswers: (sessionId, topAnswers) => {
             topAnswersEvents.push({ sessionId, topAnswers });
         },
+        onSessionClosed: (sessionId) => {
+            closedSessions.push(sessionId);
+        },
     });
-    return { service, sessionUpdates, topAnswersEvents };
+    return { service, sessionUpdates, topAnswersEvents, closedSessions };
 };
 exports.createGameService = createGameService;

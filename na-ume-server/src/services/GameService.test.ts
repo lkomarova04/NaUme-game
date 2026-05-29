@@ -152,8 +152,8 @@ describe('GameService', () => {
     expect(service.getSession(session.sessionId)?.players).toHaveLength(0);
   });
 
-  it('reset game returns session to lobby and preserves players with zeroed scores', () => {
-    const { service } = createGameService();
+  it('reset game closes and removes the session', () => {
+    const { service, closedSessions } = createGameService();
     const session = service.createSession('Reset Event');
     const alice = service.joinSession(session.sessionId, 'player', 'Алиса', 'socket-alice').player!;
     const boris = service.joinSession(session.sessionId, 'player', 'Борис', 'socket-boris').player!;
@@ -165,12 +165,9 @@ describe('GameService', () => {
     service.submitGuess(session.sessionId, alice.id, 'кофе');
 
     const reset = service.resetGame(session.sessionId, true);
-    expect(reset.phase).toBe('lobby');
-    expect(reset.roundIndex).toBe(0);
-    expect(reset.players).toHaveLength(2);
-    expect(reset.players[0]?.score).toBe(0);
-    expect(reset.rounds[0]?.answers).toHaveLength(0);
-    expect(reset.rounds[0]?.topAnswers).toHaveLength(0);
+    expect(reset.success).toBe(true);
+    expect(service.getSession(session.sessionId)).toBeUndefined();
+    expect(closedSessions).toEqual([session.sessionId]);
   });
 
   it('leaderboard appears only after last round', () => {
@@ -213,6 +210,12 @@ describe('GameService', () => {
     }
 
     expect(service.nextPhase(session.sessionId).phase).toBe('reveal');
+    const finalLeaderboard = service.nextPhase(session.sessionId);
+    expect(finalLeaderboard.phase).toBe('leaderboard');
+    expect(finalLeaderboard.phaseEndsAt).toBe(0);
+
+    jest.advanceTimersByTime(60000);
+    expect(service.getSession(session.sessionId)?.phase).toBe('leaderboard');
     expect(service.nextPhase(session.sessionId).phase).toBe('leaderboard');
   });
 
@@ -246,5 +249,16 @@ describe('GameService', () => {
     const updatedPlayer = updatedSession.players.find((item) => item.id === player.id)!;
     expect(updatedSession.rounds[0]?.answers).toHaveLength(0);
     expect(updatedPlayer.hasAnswered).toBe(false);
+  });
+
+  it('blocks inappropriate player names', () => {
+    const { service } = createGameService();
+    const session = service.createSession('Name Moderation Event');
+
+    expect(() => service.joinSession(session.sessionId, 'player', 'kakashka', 'socket-player')).toThrow(
+      /Player name contains inappropriate language/,
+    );
+
+    expect(service.getSession(session.sessionId)?.players).toHaveLength(0);
   });
 });

@@ -42,7 +42,7 @@ const DisplayPage = () => {
             currentRound={currentRound.index + 1}
             totalRounds={totalRounds}
             phaseStartsAt={session.phaseStartsAt}
-            phaseEndsAt={session.phase === 'guessing' ? session.phaseEndsAt || undefined : undefined}
+            phaseEndsAt={session.phaseEndsAt || undefined}
             phasePaused={session.phasePaused}
           />
         )}

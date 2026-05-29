@@ -27,6 +27,7 @@ type PhaseHooks = {
   onSessionUpdate?: (session: SessionState) => void;
   onTopAnswers?: (sessionId: string, topAnswers: TopAnswer[]) => void;
   onGameEvent?: (sessionId: string, event: GameEvent) => void;
+  onSessionClosed?: (sessionId: string) => void;
 };
 
 const PLAYER_RECONNECT_GRACE_MS = 30_000;
@@ -81,7 +82,12 @@ export class GameService {
         return { success: false };
       }
 
-      player = this.findOrCreatePlayer(session, playerName.trim());
+      const normalizedPlayerName = playerName.trim();
+      if (containsProfanity(normalizeText(normalizedPlayerName))) {
+        throw new Error('Player name contains inappropriate language');
+      }
+
+      player = this.findOrCreatePlayer(session, normalizedPlayerName);
       if (!player) {
         return { success: false };
       }
@@ -143,8 +149,7 @@ export class GameService {
         this.finishGuessing(session);
         break;
       case 'leaderboard':
-        this.moveAfterLeaderboard(session);
-        break;
+        return this.toSessionState(session);
       default:
         break;
     }
@@ -190,31 +195,14 @@ export class GameService {
   resetGame(sessionId: string, keepPlayers = true) {
     const session = this.requireSession(sessionId);
     this.clearTimer(session);
-
-    const preservedPlayers = keepPlayers
-      ? session.players.map((player) => ({
-          ...player,
-          score: 0,
-          hasAnswered: false,
-          hasGuessed: false,
-        }))
-      : [];
-
-    session.players = preservedPlayers;
-    session.roundIndex = 0;
-    session.phase = 'lobby';
-    session.phaseStartsAt = 0;
-    session.phaseEndsAt = 0;
-    session.phasePaused = false;
-    session.isActive = false;
-    session.rounds = this.buildRoundsFromSettings(session.settings);
-
-    if (!keepPlayers) {
-      session.playerSockets.clear();
+    for (const disconnectTimer of session.disconnectTimers.values()) {
+      clearTimeout(disconnectTimer);
     }
 
-    this.persistAndBroadcast(session);
-    return this.toSessionState(session);
+    void this.historyRepository.saveFinishedSession(this.toSessionState(session));
+    this.sessions.delete(sessionId);
+    this.hooks.onSessionClosed?.(sessionId);
+    return { success: true };
   }
 
   revealAnswer(sessionId: string, answerIndex: number) {
@@ -512,12 +500,8 @@ export class GameService {
       return;
     }
 
-    this.setPhase(session, 'leaderboard', env.leaderboardDurationMs);
-  }
-
-  private moveAfterLeaderboard(session: InternalSession) {
     session.isActive = false;
-    this.setPhase(session, 'lobby', 0);
+    this.setPhase(session, 'leaderboard', 0);
     void this.historyRepository.saveFinishedSession(this.toSessionState(session));
   }
 

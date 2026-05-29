@@ -13,6 +13,7 @@ const GameService_1 = require("../services/GameService");
 const createGameService = () => {
     const sessionUpdates = [];
     const topAnswersEvents = [];
+    const closedSessions = [];
     const service = new GameService_1.GameService(new InMemorySessionRepository_1.InMemorySessionRepository(), new HistoryRepository_1.NoopHistoryRepository(), game_1.QUESTION_BANK, {
         onSessionUpdate: (session) => {
             sessionUpdates.push(session);
@@ -20,8 +21,11 @@ const createGameService = () => {
         onTopAnswers: (sessionId, topAnswers) => {
             topAnswersEvents.push({ sessionId, topAnswers });
         },
+        onSessionClosed: (sessionId) => {
+            closedSessions.push(sessionId);
+        },
     });
-    return { service, sessionUpdates, topAnswersEvents };
+    return { service, sessionUpdates, topAnswersEvents, closedSessions };
 };
 const run = (name, fn) => {
     fn();
@@ -77,6 +81,8 @@ run('aggregate top answers and award score for correct guess', () => {
     const missResult = service.submitGuess(session.sessionId, boris.id, 'сок');
     strict_1.default.equal(missResult.result.matched, false);
     strict_1.default.equal(missResult.player.score, 0);
+    const revealState = service.nextPhase(session.sessionId);
+    strict_1.default.equal(revealState.phase, 'reveal');
     const nextState = service.nextPhase(session.sessionId);
     strict_1.default.equal(nextState.phase, 'answering');
     strict_1.default.equal(nextState.roundIndex, 1);
@@ -91,8 +97,8 @@ run('disconnect removes player from session roster', () => {
     const updatedSession = service.getSession(session.sessionId);
     strict_1.default.equal(updatedSession?.players.length, 0);
 });
-run('reset game returns session to lobby and preserves players with zeroed scores', () => {
-    const { service } = createGameService();
+run('reset game closes and removes session', () => {
+    const { service, closedSessions } = createGameService();
     const session = service.createSession('Reset Event');
     const alice = service.joinSession(session.sessionId, 'player', 'Алиса', 'socket-alice').player;
     const boris = service.joinSession(session.sessionId, 'player', 'Борис', 'socket-boris').player;
@@ -102,12 +108,9 @@ run('reset game returns session to lobby and preserves players with zeroed score
     service.nextPhase(session.sessionId);
     service.submitGuess(session.sessionId, alice.id, 'кофе');
     const reset = service.resetGame(session.sessionId, true);
-    strict_1.default.equal(reset.phase, 'lobby');
-    strict_1.default.equal(reset.roundIndex, 0);
-    strict_1.default.equal(reset.players.length, 2);
-    strict_1.default.equal(reset.players[0]?.score, 0);
-    strict_1.default.equal(reset.rounds[0]?.answers.length, 0);
-    strict_1.default.equal(reset.rounds[0]?.topAnswers.length, 0);
+    strict_1.default.equal(reset.success, true);
+    strict_1.default.equal(service.getSession(session.sessionId), undefined);
+    strict_1.default.deepEqual(closedSessions, [session.sessionId]);
 });
 run('leaderboard appears only after last round', () => {
     const { service } = createGameService();
@@ -120,6 +123,8 @@ run('leaderboard appears only after last round', () => {
     let state = service.nextPhase(session.sessionId);
     strict_1.default.equal(state.phase, 'guessing');
     state = service.nextPhase(session.sessionId);
+    strict_1.default.equal(state.phase, 'reveal');
+    state = service.nextPhase(session.sessionId);
     strict_1.default.equal(state.phase, 'answering');
     strict_1.default.equal(state.roundIndex, 1);
     for (let roundIndex = 1; roundIndex < state.rounds.length; roundIndex += 1) {
@@ -131,12 +136,18 @@ run('leaderboard appears only after last round', () => {
         strict_1.default.equal(state.phase, 'guessing');
         if (roundIndex < state.rounds.length - 1) {
             state = service.nextPhase(session.sessionId);
+            strict_1.default.equal(state.phase, 'reveal');
+            state = service.nextPhase(session.sessionId);
             strict_1.default.equal(state.phase, 'answering');
             strict_1.default.equal(state.roundIndex, roundIndex + 1);
         }
     }
+    state = service.nextPhase(session.sessionId);
+    strict_1.default.equal(state.phase, 'reveal');
     const finalState = service.nextPhase(session.sessionId);
     strict_1.default.equal(finalState.phase, 'leaderboard');
+    strict_1.default.equal(finalState.phaseEndsAt, 0);
+    strict_1.default.equal(service.nextPhase(session.sessionId).phase, 'leaderboard');
 });
 run('normalizeText groups simple word forms together', () => {
     strict_1.default.equal((0, normalizeText_1.normalizeText)('сова'), (0, normalizeText_1.normalizeText)('совушка'));
@@ -176,6 +187,12 @@ run('inappropriate answer does not count and does not lock the player', () => {
     const updatedPlayer = updatedSession.players.find((item) => item.id === player.id);
     strict_1.default.equal(updatedSession.rounds[0]?.answers.length, 0);
     strict_1.default.equal(updatedPlayer.hasAnswered, false);
+});
+run('inappropriate player name is blocked', () => {
+    const { service } = createGameService();
+    const session = service.createSession('Name Moderation Event');
+    strict_1.default.throws(() => service.joinSession(session.sessionId, 'player', 'kakashka', 'socket-player'), /Player name contains inappropriate language/);
+    strict_1.default.equal(service.getSession(session.sessionId)?.players.length, 0);
 });
 console.log('All tests passed');
 process.exit(0);

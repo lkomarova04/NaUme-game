@@ -126,6 +126,9 @@ const PlayerPage = () => {
 
       {session.phase === 'answering' && (
         <AnswerPlayer
+          question={currentQuestion.text}
+          currentRound={currentRound.index + 1}
+          totalRounds={totalRounds}
           value={answerText}
           onChange={setAnswerText}
           onStart={handleAnswerSubmit}

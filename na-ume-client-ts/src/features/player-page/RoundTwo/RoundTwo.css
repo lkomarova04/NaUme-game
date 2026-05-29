@@ -11,6 +11,11 @@
   gap: 20px;
 }
 
+.player-answering-shell {
+  min-height: calc(100vh - 48px);
+  align-content: center;
+}
+
 .player-guessing-header {
   display: grid;
   gap: 12px;
@@ -122,6 +127,11 @@
 .player-guess-input::placeholder {
   color: rgba(255, 255, 255, 0.46);
   font-weight: 400;
+}
+
+.player-guess-input:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .player-guess-submit {

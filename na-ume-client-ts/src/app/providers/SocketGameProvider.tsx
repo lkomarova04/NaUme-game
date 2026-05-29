@@ -51,6 +51,13 @@ const getStoredOrganizerToken = (sessionId: string | undefined) => {
   return window.localStorage.getItem(`na-ume-organizer-token:${sessionId}`) ?? undefined;
 };
 
+const clearStoredSession = (sessionId: string | undefined) => {
+  if (sessionId) {
+    window.localStorage.removeItem(`na-ume-organizer-token:${sessionId}`);
+  }
+  window.localStorage.removeItem(LAST_ADMIN_SESSION_KEY);
+};
+
 const getRouteSessionId = (pathname: string) => {
   const match = pathname.match(/^\/(?:display|player|admin)\/([^/]+)/);
   return match?.[1];
@@ -145,6 +152,18 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
         if (!prevPlayer) return prevPlayer;
         return nextSession.players.find((item) => item.id === prevPlayer.id) ?? prevPlayer;
       });
+    });
+
+    socket.on('session:closed', (payload: { sessionId?: string }) => {
+      clearStoredSession(payload.sessionId ?? auth.sessionId);
+      setSession(null);
+      setPlayer(null);
+
+      if (auth.role === 'organizer') {
+        navigate('/admin');
+      } else if (auth.role === 'player') {
+        navigate('/');
+      }
     });
 
     socket.on('player:update', (nextPlayer: Player) => {
@@ -416,10 +435,22 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
       },
       resetGame: () => {
         if (!session) return;
-        socketRef.current?.emit('organizer:reset-game', {
-          sessionId: session.sessionId,
-          keepPlayers: true,
-        });
+        const sessionId = session.sessionId;
+        socketRef.current?.emit(
+          'organizer:reset-game',
+          {
+            sessionId,
+            keepPlayers: false,
+          },
+          (response: { success: boolean }) => {
+            if (!response.success) return;
+
+            clearStoredSession(sessionId);
+            setSession(null);
+            setPlayer(null);
+            navigate('/admin');
+          },
+        );
       },
       setTimerPaused: (paused: boolean) => {
         if (!session) return;
