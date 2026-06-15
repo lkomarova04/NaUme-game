@@ -1,5 +1,5 @@
 .player-guessing-screen {
-  min-height: 100vh;
+  min-height: 100svh;
   padding: 24px;
   color: var(--text-main);
 }
@@ -12,7 +12,7 @@
 }
 
 .player-answering-shell {
-  min-height: calc(100vh - 48px);
+  min-height: calc(100svh - 48px);
   align-content: center;
 }
 
@@ -124,6 +124,11 @@
   outline: none;
 }
 
+.player-input-shell:focus-within {
+  border-color: rgba(255, 255, 255, 0.58);
+  box-shadow: 0 0 0 3px rgba(156, 63, 228, 0.24);
+}
+
 .player-guess-input::placeholder {
   color: rgba(255, 255, 255, 0.46);
   font-weight: 400;
@@ -169,5 +174,17 @@
   .player-roundtwo-board {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 18px 22px;
+  }
+}
+
+@media (max-width: 720px) {
+  .player-guessing-screen {
+    min-height: 100svh;
+    padding: max(24px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom));
+  }
+
+  .player-answering-shell {
+    min-height: auto;
+    padding-top: 8svh;
   }
 }

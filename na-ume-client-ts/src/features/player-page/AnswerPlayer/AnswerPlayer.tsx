@@ -1,4 +1,4 @@
-import { useTimer } from '@/shared/lib';
+import { useNow, useTimer } from '@/shared/lib';
 
 import '../PlayerMainPage/PlayerMainPage.css';
 import '../RoundTwo/RoundTwo.css';
@@ -31,7 +31,8 @@ const AnswerPlayer = ({
   status,
 }: AnswerPlayerProps) => {
   const timeLeft = useTimer(phaseEndsAt, phasePaused, phaseStartsAt);
-  const isWaiting = phaseStartsAt > Date.now();
+  const now = useNow(phaseStartsAt > 0);
+  const isWaiting = phaseStartsAt > now;
   const isDisabled = disabled || isWaiting;
 
   return (

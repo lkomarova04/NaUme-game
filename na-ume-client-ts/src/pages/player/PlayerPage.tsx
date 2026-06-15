@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { useGame } from '@/app/providers/game-context';
@@ -13,7 +13,7 @@ const PlayerPage = () => {
   const { sessionId = '' } = useParams();
   const { session, player, joinSession, submitAnswer, submitGuess, connectionError } = useGame();
   const [playerName, setPlayerName] = useState('');
-  const [sessionCode, setSessionCode] = useState(sessionId);
+  const [manualSessionCode, setManualSessionCode] = useState('');
   const [answerText, setAnswerText] = useState('');
   const [answerStatus, setAnswerStatus] = useState('');
   const [guessStatus, setGuessStatus] = useState('');
@@ -23,17 +23,13 @@ const PlayerPage = () => {
   const leaderboardPlayers = session ? getPlayersSorted(session) : [];
   const totalRounds = useMemo(() => session?.rounds.length ?? 1, [session]);
 
-  useEffect(() => {
-    setSessionCode(sessionId);
-  }, [sessionId]);
-
   const handleJoin = () => {
     const normalizedName = playerName.trim();
     if (!normalizedName) {
       return;
     }
 
-    const normalizedSessionId = (sessionId || sessionCode).trim();
+    const normalizedSessionId = (sessionId || manualSessionCode).trim();
     if (!normalizedSessionId) {
       return;
     }
@@ -91,8 +87,8 @@ const PlayerPage = () => {
         <PlayerMainPage
           value={playerName}
           onChange={setPlayerName}
-          sessionCode={sessionCode}
-          onSessionCodeChange={setSessionCode}
+          sessionCode={manualSessionCode}
+          onSessionCodeChange={setManualSessionCode}
           showSessionCode={!sessionId}
           onStart={handleJoin}
           joined={Boolean(player)}
@@ -115,8 +111,8 @@ const PlayerPage = () => {
         <PlayerMainPage
           value={playerName}
           onChange={setPlayerName}
-          sessionCode={sessionCode}
-          onSessionCodeChange={setSessionCode}
+          sessionCode={manualSessionCode}
+          onSessionCodeChange={setManualSessionCode}
           showSessionCode={!sessionId}
           onStart={handleJoin}
           joined={Boolean(player)}

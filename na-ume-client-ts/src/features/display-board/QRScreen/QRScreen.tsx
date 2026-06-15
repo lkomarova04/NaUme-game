@@ -8,10 +8,11 @@ type QRScreenProps = {
 
 const QRScreen = ({ sessionId }: QRScreenProps) => {
   const joinURL = useMemo(() => {
-    return window.location.origin;
-  }, []);
+    return `${window.location.origin}/player/${encodeURIComponent(sessionId)}`;
+  }, [sessionId]);
+
   const joinBaseURL = useMemo(() => {
-    return window.location.origin;
+    return `${window.location.origin}/player`;
   }, []);
 
   return (

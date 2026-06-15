@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { io, type Socket } from 'socket.io-client';
@@ -99,7 +99,7 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
   const authRef = useRef<SocketAuthPayload>({ role: routeRole, sessionId: routeSessionId });
   const pendingJoinRef = useRef<{ sessionId: string; playerName: string } | null>(null);
 
-  const connectSocket = (auth: SocketAuthPayload) => {
+  const connectSocket = useCallback((auth: SocketAuthPayload) => {
     socketRef.current?.removeAllListeners();
     socketRef.current?.disconnect();
 
@@ -280,7 +280,7 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
         setPlayer((prevPlayer) => (prevPlayer?.id === event.playerId ? null : prevPlayer));
       }
     });
-  };
+  }, [navigate]);
 
   useEffect(() => {
     const nextAuth: SocketAuthPayload = {
@@ -309,7 +309,7 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
       socketRef.current?.disconnect();
       socketRef.current = null;
     };
-  }, [adminAccessCode, routeRole, routeSessionId]);
+  }, [adminAccessCode, connectSocket, routeRole, routeSessionId]);
 
   const contextValue = useMemo<GameContextValue>(() => {
     return {
@@ -532,10 +532,10 @@ export const SocketGameProvider = ({ children }: { children: ReactNode }) => {
           phase,
         });
       },
-      __setTopAnswers: (_answers: TopAnswer[]) => {},
-      __setRawAnswers: (_answers: RawAnswer[]) => {},
+      __setTopAnswers: () => {},
+      __setRawAnswers: () => {},
     };
-  }, [adminAccessCode, connectionError, isConnected, navigate, player, routeSessionId, session]);
+  }, [adminAccessCode, connectSocket, connectionError, isConnected, navigate, player, routeSessionId, session]);
 
   return <GameContext.Provider value={contextValue}>{children}</GameContext.Provider>;
 };

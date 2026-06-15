@@ -1,6 +1,8 @@
-﻿import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 
-const getTimeLeft = (endTime?: number, paused = false, startTime = 0) => {
+import { useNow } from './useNow';
+
+const getTimeLeft = (endTime: number | undefined, paused: boolean, startTime: number, now: number) => {
   if (!endTime) {
     return null;
   }
@@ -9,34 +11,15 @@ const getTimeLeft = (endTime?: number, paused = false, startTime = 0) => {
     return Math.max(0, Math.ceil(endTime / 1000));
   }
 
-  const now = Date.now();
   const targetTime = startTime > now ? startTime : endTime;
 
   return Math.max(0, Math.ceil((targetTime - now) / 1000));
 };
 
 export const useTimer = (endTime?: number, paused = false, startTime = 0) => {
-  const [timeLeft, setTimeLeft] = useState<number | null>(() => getTimeLeft(endTime, paused, startTime));
+  const now = useNow(Boolean(endTime) && !paused);
 
-  useEffect(() => {
-    if (!endTime) {
-      setTimeLeft(null);
-      return;
-    }
-
-    const update = () => {
-      setTimeLeft(getTimeLeft(endTime, paused, startTime));
-    };
-
-    update();
-    if (paused) {
-      return;
-    }
-
-    const interval = setInterval(update, 250);
-
-    return () => clearInterval(interval);
-  }, [endTime, paused, startTime]);
-
-  return endTime ? timeLeft : null;
+  return useMemo(() => {
+    return getTimeLeft(endTime, paused, startTime, now);
+  }, [endTime, now, paused, startTime]);
 };

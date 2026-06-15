@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { useGame } from '@/app/providers/game-context';
@@ -41,10 +41,6 @@ const AdminPage = () => {
 
   const currentTimerSec =
     useTimer(session?.phaseEndsAt || undefined, session?.phasePaused ?? false, session?.phaseStartsAt ?? 0) ?? 0;
-
-  useEffect(() => {
-    setAdminCodeDraft(adminAccessCode);
-  }, [adminAccessCode]);
 
   const applyAdminCode = async () => {
     const isVerified = await verifyAdminAccess(adminCodeDraft);
